@@ -5,7 +5,7 @@ let isShortVersion = true;  // Track whether we're using the short or long versi
 
 // Function to load nameday JSON file
 function loadNamedays() {
-  let fileName = isShortVersion ? "./resources/meniny-short.json" : "./resources/meniny-long.json";
+  let fileName = isShortVersion ? "meniny-short.json" : "meniny-long.json";
   try {
     namedays = storage.readJSON(fileName, 1);
   } catch (e) {
