@@ -155,8 +155,8 @@ fetchWeather();
 // Refresh the clock every minute
 setInterval(drawClock, 60000);
 
-// Optionally, refresh weather every 10 minutes
-setInterval(fetchWeather, 10 * 60 * 1000);
+// Optionally, refresh weather every 1.5 minutes
+setInterval(fetchWeather, 1.5 * 60 * 1000);
 
 // Draw immediately when the app starts
 drawClock();
