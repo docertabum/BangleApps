@@ -1,44 +1,53 @@
-// timeout used to update every minute
-let drawTimeout;
+const storage = require("Storage");
+let namedays;
 
-// schedule a draw for the next minute
-function queueDraw() {
-  if (drawTimeout) clearTimeout(drawTimeout);
-  drawTimeout = setTimeout(function() {
-    drawTimeout = undefined;
-    draw();
-  }, 60000 - (Date.now() % 60000));
+try {
+  // Load namedays data
+  namedays = storage.readJSON("./resources/meniny-short.json", 1);
+} catch (e) {
+  console.log("Failed to load namedays data");
 }
 
-function draw() {
-  // queue next draw in one minute
-  queueDraw();
-  // Work out where to draw...
-  var x = g.getWidth()/2;
-  var y = g.getHeight()/2;
-  g.reset();
-  // work out locale-friendly date/time
-  var date = new Date();
-  var timeStr = require("locale").time(date,1);
-  var dateStr = require("locale").date(date);
-  // draw time
-  g.setFontAlign(0,0).setFont("Vector",48);
-  g.clearRect(0,y-15,g.getWidth(),y+25); // clear the background
-  g.drawString(timeStr,x,y);
-  // draw date
-  y += 35;
-  g.setFontAlign(0,0).setFont("6x8");
-  g.clearRect(0,y-4,g.getWidth(),y+4); // clear the background
-  g.drawString(dateStr,x,y);
+// Function to get the nameday for the current date
+function getNameday() {
+  const now = new Date();
+  const month = now.getMonth();  // 0-11
+  const day = now.getDate();     // 1-31
+  if (namedays && namedays[month] && namedays[month][day]) {
+    return namedays[month][day];
+  } else {
+    return "No Nameday";
+  }
 }
 
-// Clear the screen once, at startup
-g.clear();
-// draw immediately at first, queue update
-draw();
+// Function to draw the clock
+function drawClock() {
+  g.clear();
 
-// Show launcher when middle button pressed
-Bangle.setUI("clock");
-// Load widgets
-Bangle.loadWidgets();
-Bangle.drawWidgets();
+  // Get current time
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+
+  // Format time to HH:MM
+  const timeStr = ("0" + hours).substr(-2) + ":" + ("0" + minutes).substr(-2);
+
+  // Display time at the top
+  g.setFont("Vector", 40);      // Set font size for the clock
+  g.setFontAlign(0, 0);         // Center alignment
+  g.drawString(timeStr, g.getWidth() / 2, g.getHeight() / 4); // Draw in upper part
+
+  // Display nameday at the bottom
+  const nameday = getNameday();
+  g.setFont("Vector", 30);      // Set font size for the nameday
+  g.drawString(nameday, g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
+
+  // Update display
+  g.flip();
+}
+
+// Refresh the clock every second
+setInterval(drawClock, 1000);
+
+// Draw immediately when the app starts
+drawClock();
