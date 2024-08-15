@@ -2,7 +2,7 @@
   "id": "totallydifferentclock",
   "name": "Moje hodinky",
   "shortName": "TotalClock",
-  "version": "0.08",
+  "version": "0.081",
   "description": "Dajaky deskripsn",
   "icon": "icon.png",
   "type": "clock",
@@ -23,7 +23,7 @@
     },
     {
       "name": "hello.txt",
-      "url": "hello.txt"
+      "url": "./resources/hello.txt"
     },
     {
       "name": "meniny-long.json",
