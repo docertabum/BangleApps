@@ -83,9 +83,8 @@ function fetchWeather() {
 function httpBin() {
     logDebug("Starting httpbin fetch...");
     Bangle.http("https://httpbin.org/get")
-        .then(response => response.text())
         .then(res => {
-            logDebug("HttpBin Response: " + res);
+            logDebug("HttpBin Response: " + JSON.stringify(res));
             console.log("HttpBin Response", res);
         })
         .catch(err => {
