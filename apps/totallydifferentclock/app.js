@@ -3,10 +3,10 @@ let namedays, helloText;
 
 try {
   // Load namedays data
-  namedays = storage.readJSON("./resources/meniny-short.json", 1);
+  namedays = storage.readJSON("meniny-short.json", 1);
 
   // Load hello.txt content
-  helloText = storage.read("./resources/hello.txt") || "No message";
+  helloText = storage.read("hello.txt") || "No message";
 } catch (e) {
   console.log("Failed to load data:", e);
   helloText = "Error loading message";
