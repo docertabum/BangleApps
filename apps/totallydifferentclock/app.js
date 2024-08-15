@@ -176,5 +176,10 @@ setInterval(fetchWeather, 1.5 * 60 * 1000);
 
 setInterval(httpBin, 5000);
 
+
+// Show launcher when button pressed
+Bangle.setUI("clock");
+Bangle.loadWidgets();
+Bangle.drawWidgets();
 // Draw immediately when the app starts
 drawClock();
