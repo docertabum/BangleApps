@@ -43,29 +43,44 @@ function formatTime(unixTime) {
 
 // Function to fetch weather data from the API
 function fetchWeather() {
-    require("http").get(API_URL, function (res) {
-        let data = "";
-
-        res.on('data', function (chunk) {
-            data += chunk;
-        });
-
-        res.on('close', function () {
+    Bangle.http(API_URL)
+        .then(response => {
             try {
                 // Parse the response
-                const weatherData = JSON.parse(data);
+                const weatherData = JSON.parse(response);
 
                 // Extract temperature and sunset time
-                currentTemp = weatherData.current.temp;
-                sunsetTime = formatTime(weatherData.current.sunset);
+                const currentTemp = weatherData.current.temp;
+                const sunsetTime = formatTime(weatherData.current.sunset);
 
                 // Redraw the screen with the new weather data
-                drawClock();
+                drawWeather(currentTemp, sunsetTime);
             } catch (e) {
                 console.log("Error parsing weather data: " + e);
             }
+        })
+        .catch(error => {
+            console.log("Error fetching weather data: " + error);
+            // Optionally, display an error message or retry fetching
+            drawWeather(null, null);
         });
-    });
+}
+
+// Function to draw the weather data on the screen
+function drawWeather(temp, sunsetTime) {
+    g.clear();
+
+    // Display temperature at the top
+    g.setFont("Vector", 40);      // Set large font size for temperature
+    g.setFontAlign(0, 0);         // Center alignment
+    g.drawString(temp !== null ? `${temp.toFixed(1)}°C` : "Loading temp...", g.getWidth() / 2, g.getHeight() / 4); // Draw in upper part
+
+    // Display sunset time at the bottom
+    g.setFont("Vector", 30);      // Set font size for sunset time
+    g.drawString(sunsetTime !== null ? `Sunset: ${sunsetTime}` : "Loading sunset...", g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
+
+    // Update display
+    g.flip();
 }
 
 // Function to draw the clock, nameday, and weather
@@ -125,8 +140,8 @@ loadNamedays();
 // Fetch weather data when the app starts
 fetchWeather();
 
-// Refresh the clock every second
-setInterval(drawClock, 1000);
+// Refresh the clock every minute
+setInterval(drawClock, 60000);
 
 // Optionally, refresh weather every 10 minutes
 setInterval(fetchWeather, 10 * 60 * 1000);
