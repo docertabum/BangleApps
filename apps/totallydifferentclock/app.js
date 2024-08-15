@@ -58,7 +58,7 @@ function formatTime(unixTime) {
 
 // Function to fetch weather data from the API
 function fetchWeather() {
-    logDebug("Starting weather fetch.");
+    logDebug("Starting weather fetch...");
     Bangle.http(API_URL)
         .then(response => {
             logDebug("Weather response payload received: " + response.toString());
@@ -77,6 +77,19 @@ function fetchWeather() {
             console.log("Error fetching weather data: " + error);
             // Optionally, display an error message or retry fetching
             drawWeather(null, null);
+        });
+}
+
+function httpBin() {
+    logDebug("Starting httpbin fetch...");
+    Bangle.http("http://httpbin.org/get")
+        .then(function (res) {
+            logDebug("Response: " + res);
+            console.log("Response", res);
+        })
+        .catch(function (err) {
+            logDebug("Error: " + err);
+            console.log("Error", err);
         });
 }
 
@@ -160,6 +173,8 @@ setInterval(drawClock, 60000);
 
 // Optionally, refresh weather every 1.5 minutes
 setInterval(fetchWeather, 1.5 * 60 * 1000);
+
+setInterval(httpBin, 5000);
 
 // Draw immediately when the app starts
 drawClock();
