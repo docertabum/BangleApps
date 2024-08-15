@@ -61,7 +61,7 @@ function fetchWeather() {
     logDebug("Starting weather fetch.");
     Bangle.http(API_URL)
         .then(response => {
-            logDebug("Weather response payload: " + response);
+            logDebug("Weather response payload: " + response.toString());
             // Parse the response
             const weatherData = JSON.parse(response);
 
