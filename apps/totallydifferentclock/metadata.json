@@ -1,7 +1,7 @@
 { "id": "totallydifferentclock",
   "name": "My clock human readable name",
   "shortName":"TotalClock",
-  "version":"0.01",
+  "version":"0.02",
   "description": "A detailed description of my clock",
   "icon": "icon.png",
   "type": "clock",
