@@ -1,11 +1,15 @@
 const storage = require("Storage");
-let namedays;
+let namedays, helloText;
 
 try {
   // Load namedays data
   namedays = storage.readJSON("./resources/meniny-short.json", 1);
+
+  // Load hello.txt content
+  helloText = storage.read("./resources/hello.txt") || "No message";
 } catch (e) {
-  console.log("Failed to load namedays data");
+  console.log("Failed to load data:", e);
+  helloText = "Error loading message";
 }
 
 // Function to get the nameday for the current date
@@ -37,10 +41,14 @@ function drawClock() {
   g.setFontAlign(0, 0);         // Center alignment
   g.drawString(timeStr, g.getWidth() / 2, g.getHeight() / 4); // Draw in upper part
 
-  // Display nameday at the bottom
+  // Display nameday in the middle
   const nameday = getNameday();
   g.setFont("Vector", 30);      // Set font size for the nameday
-  g.drawString(nameday, g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
+  g.drawString(nameday, g.getWidth() / 2, (2 * g.getHeight()) / 4); // Draw in middle part
+
+  // Display hello.txt content at the bottom
+  g.setFont("Vector", 20);      // Set font size for the message
+  g.drawString(helloText, g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
 
   // Update display
   g.flip();
