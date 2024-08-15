@@ -1,9 +1,9 @@
 {
   "id": "totallydifferentclock",
-  "name": "My clock human readable name",
+  "name": "Moje hodinky",
   "shortName": "TotalClock",
   "version": "0.06",
-  "description": "A detailed description of my clock",
+  "description": "Dajaky deskripsn",
   "icon": "icon.png",
   "type": "clock",
   "tags": "clock",
