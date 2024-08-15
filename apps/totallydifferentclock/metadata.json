@@ -2,7 +2,7 @@
   "id": "totallydifferentclock",
   "name": "My clock human readable name",
   "shortName": "TotalClock",
-  "version": "0.04",
+  "version": "0.05",
   "description": "A detailed description of my clock",
   "icon": "icon.png",
   "type": "clock",
@@ -23,7 +23,15 @@
     },
     {
       "name": "hello.txt",
-      "url": "hello.txt"
+      "url": "hello_url.txt"
+    },
+    {
+      "name": "meniny-long.json",
+      "url": "long.txt"
+    },
+    {
+      "name": "meniny-short.json",
+      "url": "short.txt"
     }
   ]
 }
