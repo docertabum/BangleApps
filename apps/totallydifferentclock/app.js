@@ -58,10 +58,10 @@ function formatTime(unixTime) {
 
 // Function to fetch weather data from the API
 function fetchWeather() {
-    logDebug("Starting weather fetch...");
+    logDebug("Starting weather fetch from " + API_URL);
     Bangle.http(API_URL)
         .then(response => {
-            logDebug("Weather response payload received: " + response.toString());
+            logDebug("Weather response payload received: " + JSON.stringify(response));
             // Parse the response
             const weatherData = JSON.parse(response);
 
@@ -85,11 +85,11 @@ function httpBin() {
     Bangle.http("https://httpbin.org/get")
         .then(res => {
             logDebug("HttpBin Response: " + JSON.stringify(res));
-            console.log("HttpBin Response", res);
+            // console.log("HttpBin Response", res);
         })
         .catch(err => {
             logDebug("HttpBin Error: " + err);
-            console.log("HttpBinError", err);
+            // console.log("HttpBinError", err);
         });
 }
 
