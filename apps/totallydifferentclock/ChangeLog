@@ -7,3 +7,4 @@
 0.07: test
 0.08: test2
 0.081: resources clean-up
+0.09: added possibility to switch between short and long nameday list (touchscreen event)

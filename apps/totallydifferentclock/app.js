@@ -1,15 +1,17 @@
 const storage = require("Storage");
-let namedays, helloText;
 
-try {
-  // Load namedays data
-  namedays = storage.readJSON("meniny-short.json", 1);
+let namedays;
+let isShortVersion = true;  // Track whether we're using the short or long version
 
-  // Load hello.txt content
-  helloText = storage.read("hello.txt") || "No message";
-} catch (e) {
-  console.log("Failed to load data:", e);
-  helloText = "Error loading message";
+// Function to load nameday JSON file
+function loadNamedays() {
+  let fileName = isShortVersion ? "./resources/meniny-short.json" : "./resources/meniny-long.json";
+  try {
+    namedays = storage.readJSON(fileName, 1);
+  } catch (e) {
+    console.log("Failed to load namedays data from " + fileName);
+    namedays = {};  // Fallback in case of error
+  }
 }
 
 // Function to get the nameday for the current date
@@ -41,19 +43,35 @@ function drawClock() {
   g.setFontAlign(0, 0);         // Center alignment
   g.drawString(timeStr, g.getWidth() / 2, g.getHeight() / 4); // Draw in upper part
 
-  // Display nameday in the middle
+  // Display nameday at the bottom
   const nameday = getNameday();
-  g.setFont("Vector",28);
-  g.setColor(Math.random(),Math.random(),Math.random())// Set font size for the nameday
-  g.drawString(nameday, g.getWidth() / 2, (2 * g.getHeight()) / 4); // Draw in middle part
 
-  // Display hello.txt content at the bottom
-  g.setFont("Vector", 20);      // Set font size for the message
-  g.drawString(helloText, g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
+  // Adjust font size depending on whether short or long version
+  const fontSize = isShortVersion ? 30 : 15;  // 30 for short version, 15 for long version
+  g.setFont("Vector", fontSize);   // Set the appropriate font size
+  g.drawString(nameday, g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
 
   // Update display
   g.flip();
 }
+
+// Function to handle screen tap
+function onScreenTap() {
+  // Toggle between short and long versions of the nameday
+  isShortVersion = !isShortVersion;
+
+  // Reload the nameday data
+  loadNamedays();
+
+  // Redraw the clock with updated nameday and font size
+  drawClock();
+}
+
+// Attach the tap event handler
+Bangle.on('touch', onScreenTap);
+
+// Initial loading of namedays
+loadNamedays();
 
 // Refresh the clock every second
 setInterval(drawClock, 1000);
