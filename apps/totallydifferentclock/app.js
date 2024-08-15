@@ -43,7 +43,8 @@ function drawClock() {
 
   // Display nameday in the middle
   const nameday = getNameday();
-  g.setFont("Vector", 30);      // Set font size for the nameday
+  g.setFont("Vector",28);
+  g.setColor(Math.random(),Math.random(),Math.random())// Set font size for the nameday
   g.drawString(nameday, g.getWidth() / 2, (2 * g.getHeight()) / 4); // Draw in middle part
 
   // Display hello.txt content at the bottom

@@ -2,7 +2,7 @@
   "id": "totallydifferentclock",
   "name": "My clock human readable name",
   "shortName": "TotalClock",
-  "version": "0.05",
+  "version": "0.06",
   "description": "A detailed description of my clock",
   "icon": "icon.png",
   "type": "clock",
