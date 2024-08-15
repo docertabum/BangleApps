@@ -61,9 +61,11 @@ function fetchWeather() {
     logDebug("Starting weather fetch.");
     Bangle.http(API_URL)
         .then(response => {
-            logDebug("Weather response payload: " + response.toString());
+            logDebug("Weather response payload received: " + response.toString());
             // Parse the response
             const weatherData = JSON.parse(response);
+
+            logDebug("Weather response payload parsed: " + weatherData);
 
             const currentTemp = weatherData.current.temp;
             const sunsetTime = formatTime(weatherData.current.sunset);
@@ -80,6 +82,7 @@ function fetchWeather() {
 
 // Function to draw the weather data on the screen
 function drawWeather(temp, sunsetTime) {
+    logDebug("Drawing weather on the screen: " + temp + " " + sunsetTime);
     g.clear();
 
     // Display temperature at the top
