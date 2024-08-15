@@ -10,6 +10,21 @@ let isShortVersion = true;  // Track whether we're using the short or long versi
 let currentTemp = null;
 let sunsetTime = null;
 
+// debuging
+// Define the log file name
+const LOG_FILE = "debug.log";
+
+// Function to write a debug message to a file
+function logDebug(message) {
+    let logEntry = new Date().toISOString() + " - " + message + "\n";
+
+    // Read the existing log file, if it exists
+    let existingLog = storage.read(LOG_FILE) || "";
+
+    // Append the new log entry
+    storage.write(LOG_FILE, existingLog + logEntry);
+}
+
 // Function to load nameday JSON file
 function loadNamedays() {
     let fileName = isShortVersion ? "meniny-short.json" : "meniny-long.json";
@@ -43,21 +58,18 @@ function formatTime(unixTime) {
 
 // Function to fetch weather data from the API
 function fetchWeather() {
+    logDebug("Starting weather fetch.");
     Bangle.http(API_URL)
         .then(response => {
-            try {
-                // Parse the response
-                const weatherData = JSON.parse(response);
+            logDebug("Weather response payload: " + response);
+            // Parse the response
+            const weatherData = JSON.parse(response);
 
-                // Extract temperature and sunset time
-                const currentTemp = weatherData.current.temp;
-                const sunsetTime = formatTime(weatherData.current.sunset);
+            const currentTemp = weatherData.current.temp;
+            const sunsetTime = formatTime(weatherData.current.sunset);
 
-                // Redraw the screen with the new weather data
-                drawWeather(currentTemp, sunsetTime);
-            } catch (e) {
-                console.log("Error parsing weather data: " + e);
-            }
+            // Redraw the screen with the new weather data
+            drawWeather(currentTemp, sunsetTime);
         })
         .catch(error => {
             console.log("Error fetching weather data: " + error);
@@ -111,7 +123,7 @@ function drawClock() {
         g.setFont("Vector", 20);  // Set smaller font size for weather
         g.drawString(`${currentTemp.toFixed(1)}°C, Sunset: ${sunsetTime}`, g.getWidth() / 2, (7 * g.getHeight()) / 8);
     } else {
-        g.setFont("Vector", 20);
+        g.setFont("Vector", 10);
         g.drawString("Loading weather...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
 
