@@ -63,13 +63,13 @@ function fetchWeather() {
         .then(response => {
             logDebug("Weather response payload received: " + JSON.stringify(response));
             // Parse the response
-            const weatherData = JSON.parse(response.resp);
+            const weatherData = JSON.parse(response);
 
             logDebug("Weather response payload parsed: " + weatherData);
 
             const currentTemp = weatherData.current.temp;
             const sunsetTime = formatTime(weatherData.current.sunset);
-
+            logDebug("Weather response payload parsed: " + currentTemp + "::" + sunsetTime);
             // Redraw the screen with the new weather data
             drawWeather(currentTemp, sunsetTime);
         })
@@ -77,19 +77,6 @@ function fetchWeather() {
             console.log("Error fetching weather data: " + error);
             // Optionally, display an error message or retry fetching
             drawWeather(null, null);
-        });
-}
-
-function httpBin() {
-    logDebug("Starting httpbin fetch...");
-    Bangle.http("https://httpbin.org/get")
-        .then(res => {
-            logDebug("HttpBin Response: " + JSON.stringify(res));
-            // console.log("HttpBin Response", res);
-        })
-        .catch(err => {
-            logDebug("HttpBin Error: " + err);
-            // console.log("HttpBinError", err);
         });
 }
 
@@ -173,8 +160,6 @@ setInterval(drawClock, 60000);
 
 // Optionally, refresh weather every 1.5 minutes
 setInterval(fetchWeather, 1.5 * 60 * 1000);
-
-setInterval(httpBin, 5000);
 
 
 // Show launcher when button pressed
