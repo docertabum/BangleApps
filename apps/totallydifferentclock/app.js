@@ -2,7 +2,7 @@ const storage = require("Storage");
 
 // Constants for the API URL
 const config = storage.readJSON('weather-key.json', 1);
-const API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=49.2946&lon=21.275&units=metric&exclude=minutely&appid=${config.appid}`;
+const API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=49.2946&lon=21.275&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
 
 // Variables for namedays and weather
 let namedays;
