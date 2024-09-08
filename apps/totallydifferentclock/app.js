@@ -63,7 +63,7 @@ function fetchWeather() {
         .then(response => {
             logDebug("Weather response payload received: " + JSON.stringify(response));
             // Parse the response
-            const weatherData = JSON.parse(response);
+            const weatherData = JSON.parse(response.resp);
 
             logDebug("Weather response payload parsed: " + weatherData);
 
