@@ -59,25 +59,32 @@ function formatTime(unixTime) {
 // Function to fetch weather data from the API
 function fetchWeather() {
     logDebug("Starting weather fetch from " + API_URL);
-    Bangle.http(API_URL)
-        .then(response => {
-            logDebug("Weather response payload received: " + JSON.stringify(response));
-            // Parse the response
-            const weatherData = JSON.parse(response);
+    if (false) {
+        Bangle.http(API_URL)
+            .then(response => {
+                logDebug("Weather response payload received: " + JSON.stringify(response));
+                // Parse the response
+                const weatherData = JSON.parse(response);
 
-            logDebug("Weather response payload parsed: " + weatherData);
+                logDebug("Weather response payload parsed: " + weatherData);
 
-            const currentTemp = weatherData.current.temp;
-            const sunsetTime = formatTime(weatherData.current.sunset);
-            logDebug("Weather response payload parsed: " + currentTemp + "::" + sunsetTime);
-            // Redraw the screen with the new weather data
-            drawWeather(currentTemp, sunsetTime);
-        })
-        .catch(error => {
-            console.log("Error fetching weather data: " + error);
-            // Optionally, display an error message or retry fetching
-            drawWeather(null, null);
-        });
+                const currentTemp = weatherData.current.temp;
+                const sunsetTime = formatTime(weatherData.current.sunset);
+                logDebug("Weather response payload parsed: " + currentTemp + "::" + sunsetTime);
+                // Redraw the screen with the new weather data
+                drawWeather(currentTemp, sunsetTime);
+            })
+            .catch(error => {
+                console.log("Error fetching weather data: " + error);
+                // Optionally, display an error message or retry fetching
+                drawWeather(null, null);
+            });
+    } else {
+        console.log("Weather fetch disabled");
+        const weatherPayload = '{"t":"http","id":"40326619772","resp":"{\\"lat\\":49.2946,\\"lon\\":21.275,\\"timezone\\":\\"Europe/Bratislava\\",\\"timezone_offset\\":7200,\\"current\\":{\\"dt\\":1726233366,\\"sunrise\\":1726200524,\\"sunset\\":1726246381,\\"temp\\":24.8,\\"feels_like\\":24.48,\\"pressure\\":1003,\\"humidity\\":44,\\"dew_point\\":11.73,\\"uvi\\":2.4,\\"clouds\\":100,\\"visibility\\":10000,\\"wind_speed\\":2.26,\\"wind_deg\\":139,\\"wind_gust\\":4.89,\\"weather\\":[{\\"id\\":500,\\"main\\":\\"Rain\\",\\"description\\":\\"light rain\\",\\"icon\\":\\"10d\\"}],\\"rain\\":{\\"1h\\":0.17}}}"}';
+        const weatherData = JSON.parse(weatherPayload.resp);
+        console.log("Aktualna teplota je " + weatherData.current.temp);
+    }
 }
 
 // Function to draw the weather data on the screen
