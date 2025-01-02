@@ -49,41 +49,44 @@ function getNameday() {
 }
 
 // Function to convert Unix timestamp to HH:MM format
-function formatTime(unixTime) {
-    const date = new Date(unixTime * 1000); // Convert to milliseconds
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    return `${("0" + hours).slice(-2)}:${("0" + minutes).slice(-2)}`;
-}
-
-// Function to fetch weather data from the API
 function fetchWeather() {
-    logDebug("Starting weather fetch from " + API_URL);
-    if (false) {
+    if (true) {
+        logDebug("Starting weather fetch from " + API_URL);
         Bangle.http(API_URL)
             .then(response => {
-                logDebug("Weather response payload received: " + JSON.stringify(response));
-                // Parse the response
-                const weatherData = JSON.parse(response);
-
-                logDebug("Weather response payload parsed: " + weatherData);
-
-                const currentTemp = weatherData.current.temp;
-                const sunsetTime = formatTime(weatherData.current.sunset);
-                logDebug("Weather response payload parsed: " + currentTemp + "::" + sunsetTime);
-                // Redraw the screen with the new weather data
-                drawWeather(currentTemp, sunsetTime);
+                logDebug("Weather response payload received: " + response);
+                const parsedResponse = JSON.parse(response);
+                const weatherData = JSON.parse(parsedResponse.resp);
+                currentTemp = weatherData.current.temp;
+                sunsetTime = unixToHumanReadable(weatherData.current.sunset);
+                // drawWeather(currentTemp, sunsetTime);
             })
             .catch(error => {
                 console.log("Error fetching weather data: " + error);
-                // Optionally, display an error message or retry fetching
-                drawWeather(null, null);
+                // drawWeather(null, null);
             });
     } else {
-        console.log("Weather fetch disabled");
+        console.log("Weather fetch disabled. Mocking the weather...");
         const weatherPayload = '{"t":"http","id":"40326619772","resp":"{\\"lat\\":49.2946,\\"lon\\":21.275,\\"timezone\\":\\"Europe/Bratislava\\",\\"timezone_offset\\":7200,\\"current\\":{\\"dt\\":1726233366,\\"sunrise\\":1726200524,\\"sunset\\":1726246381,\\"temp\\":24.8,\\"feels_like\\":24.48,\\"pressure\\":1003,\\"humidity\\":44,\\"dew_point\\":11.73,\\"uvi\\":2.4,\\"clouds\\":100,\\"visibility\\":10000,\\"wind_speed\\":2.26,\\"wind_deg\\":139,\\"wind_gust\\":4.89,\\"weather\\":[{\\"id\\":500,\\"main\\":\\"Rain\\",\\"description\\":\\"light rain\\",\\"icon\\":\\"10d\\"}],\\"rain\\":{\\"1h\\":0.17}}}"}';
-        const weatherData = JSON.parse(weatherPayload.resp);
-        console.log("Aktualna teplota je " + weatherData.current.temp);
+
+        try {
+            console.log("Weather payload before parsing:\n", weatherPayload);
+
+            // Parse the outer JSON
+            const parsedPayload = JSON.parse(weatherPayload);
+            console.log("Parsed payload:\n", parsedPayload);
+
+            // Parse the "resp" field
+            const weatherData = JSON.parse(parsedPayload.resp); // Parse "resp" here
+            console.log("Parsed weather data:\n", weatherData);
+
+            // Access the keys and properties
+            console.log("Keys in weatherData:", Object.keys(weatherData));
+            console.log("Current weather data:", weatherData.current);
+            console.log("Current temperature:", weatherData.current.temp); // Access temperature here
+        } catch (error) {
+            console.error("Error processing weather payload:", error);
+        }
     }
 }
 
@@ -130,7 +133,7 @@ function drawClock() {
 
     // Display weather (temperature and sunset) at the bottom
     if (currentTemp !== null && sunsetTime !== null) {
-        g.setFont("Vector", 20);  // Set smaller font size for weather
+        g.setFont("Vector", 10);  // Set smaller font size for weather
         g.drawString(`${currentTemp.toFixed(1)}°C, Sunset: ${sunsetTime}`, g.getWidth() / 2, (7 * g.getHeight()) / 8);
     } else {
         g.setFont("Vector", 10);
@@ -153,6 +156,11 @@ function onScreenTap() {
     drawClock();
 }
 
+function unixToHumanReadable(unixTimestamp) {
+    const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
+    return date.toLocaleString(); // Adjust locale and options as needed
+}
+
 // Attach the tap event handler
 Bangle.on('touch', onScreenTap);
 
@@ -160,7 +168,7 @@ Bangle.on('touch', onScreenTap);
 loadNamedays();
 
 // Fetch weather data when the app starts
-fetchWeather();
+// fetchWeather();
 
 // Refresh the clock every minute
 setInterval(drawClock, 60000);
