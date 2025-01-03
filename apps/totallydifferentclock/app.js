@@ -27,17 +27,19 @@ function logDebug(message) {
 
 // Function to load nameday JSON file
 function loadNamedays() {
+    logDebug("Loading namedays...");
     let fileName = isShortVersion ? "meniny-short.json" : "meniny-long.json";
     try {
         namedays = storage.readJSON(fileName, 1);
     } catch (e) {
-        console.log("Failed to load namedays data from " + fileName);
+        logDebug("Failed to load namedays data from " + fileName);
         namedays = {};  // Fallback in case of error
     }
 }
 
 // Function to get the nameday for the current date
 function getNameday() {
+    logDebug("Getting nameday...");
     const now = new Date();
     const month = now.getMonth();  // 0-11
     const day = now.getDate();     // 1-31
@@ -57,37 +59,37 @@ function fetchWeather() {
                 logDebug("Weather response payload received: " + JSON.parse(response));
                 const parsedResponse = JSON.parse(response);
                 const weatherData = JSON.parse(parsedResponse.resp);
-                console.log("Weather data:", weatherData);
-                console.log("Weather data parsed:", JSON.parse(weatherData));
+                logDebug("Weather data:" + weatherData);
+                logDebug("Weather data parsed:" + JSON.parse(weatherData));
                 currentTemp = weatherData.current.temp;
                 sunsetTime = unixToHumanReadable(weatherData.current.sunset);
                 // drawWeather(currentTemp, sunsetTime);
             })
             .catch(error => {
-                console.log("Error fetching weather data: " + error);
+                logDebug("Error fetching weather data: " + error);
                 // drawWeather(null, null);
             });
     } else {
-        console.log("Weather fetch disabled. Mocking the weather...");
+        logDebug("Weather fetch disabled. Mocking the weather...");
         const weatherPayload = '{"t":"http","id":"40326619772","resp":"{\\"lat\\":49.2946,\\"lon\\":21.275,\\"timezone\\":\\"Europe/Bratislava\\",\\"timezone_offset\\":7200,\\"current\\":{\\"dt\\":1726233366,\\"sunrise\\":1726200524,\\"sunset\\":1726246381,\\"temp\\":24.8,\\"feels_like\\":24.48,\\"pressure\\":1003,\\"humidity\\":44,\\"dew_point\\":11.73,\\"uvi\\":2.4,\\"clouds\\":100,\\"visibility\\":10000,\\"wind_speed\\":2.26,\\"wind_deg\\":139,\\"wind_gust\\":4.89,\\"weather\\":[{\\"id\\":500,\\"main\\":\\"Rain\\",\\"description\\":\\"light rain\\",\\"icon\\":\\"10d\\"}],\\"rain\\":{\\"1h\\":0.17}}}"}';
 
         try {
-            console.log("Weather payload before parsing:\n", weatherPayload);
+            logDebug("Weather payload before parsing:\n" + weatherPayload);
 
             // Parse the outer JSON
             const parsedPayload = JSON.parse(weatherPayload);
-            console.log("Parsed payload:\n", parsedPayload);
+            logDebug("Parsed payload:\n" + parsedPayload);
 
             // Parse the "resp" field
             const weatherData = JSON.parse(parsedPayload.resp); // Parse "resp" here
-            console.log("Parsed weather data:\n", weatherData);
+            logDebug("Parsed weather data:\n" + weatherData);
 
             // Access the keys and properties
-            console.log("Keys in weatherData:", Object.keys(weatherData));
-            console.log("Current weather data:", weatherData.current);
-            console.log("Current temperature:", weatherData.current.temp); // Access temperature here
+            logDebug("Keys in weatherData:" + Object.keys(weatherData));
+            logDebug("Current weather data:" + weatherData.current);
+            logDebug("Current temperature:" + weatherData.current.temp); // Access temperature here
         } catch (error) {
-            console.error("Error processing weather payload:", error);
+            logDebug("Error processing weather payload:" + error);
         }
     }
 }
@@ -112,7 +114,7 @@ function drawWeather(temp, sunsetTime) {
 
 // Function to draw the clock, nameday, and weather
 function drawClock() {
-    console.log("Drawing the clock...");
+    logDebug("Drawing the clock...");
     g.clear();
 
     // Get current time

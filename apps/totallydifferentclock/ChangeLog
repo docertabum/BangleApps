@@ -26,3 +26,4 @@
 0.25: mocked weather
 0.26: switch to real weather data
 0.27: viacej logovania
+0.28: switch na logDebug()
