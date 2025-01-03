@@ -56,7 +56,8 @@ function fetchWeather() {
         logDebug("Starting weather fetch from " + API_URL);
         Bangle.http(API_URL)
             .then(response => {
-                logDebug("Weather response payload received: " + JSON.parse(response));
+                logDebug("Weather response payload received stringify: " + JSON.stringify(response));
+                logDebug("Weather response payload received parse: " + JSON.parse(response));
                 const parsedResponse = JSON.parse(response);
                 const weatherData = JSON.parse(parsedResponse.resp);
                 logDebug("Weather data:" + weatherData);
@@ -95,6 +96,7 @@ function fetchWeather() {
 }
 
 function performHttpBin() {
+    logDebug("Performing HTTP request to httpbin.org...");
     Bangle.http("https://httpbin.org/get")
         .then(response => {
             logDebug("Response: " + JSON.parse(response));
