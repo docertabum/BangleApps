@@ -54,9 +54,11 @@ function fetchWeather() {
         logDebug("Starting weather fetch from " + API_URL);
         Bangle.http(API_URL)
             .then(response => {
-                logDebug("Weather response payload received: " + response);
+                logDebug("Weather response payload received: " + JSON.parse(response));
                 const parsedResponse = JSON.parse(response);
                 const weatherData = JSON.parse(parsedResponse.resp);
+                console.log("Weather data:", weatherData);
+                console.log("Weather data parsed:", JSON.parse(weatherData));
                 currentTemp = weatherData.current.temp;
                 sunsetTime = unixToHumanReadable(weatherData.current.sunset);
                 // drawWeather(currentTemp, sunsetTime);
@@ -110,6 +112,7 @@ function drawWeather(temp, sunsetTime) {
 
 // Function to draw the clock, nameday, and weather
 function drawClock() {
+    console.log("Drawing the clock...");
     g.clear();
 
     // Get current time
