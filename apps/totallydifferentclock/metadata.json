@@ -2,7 +2,7 @@
   "id": "totallydifferentclock",
   "name": "Moje hodinky",
   "shortName": "TotalClock",
-  "version": "0.38",
+  "version": "0.39",
   "description": "Dajaky deskripsn",
   "icon": "icon.png",
   "type": "clock",
@@ -15,6 +15,10 @@
     {
       "name": "totallydifferentclock.app.js",
       "url": "app.js"
+    },
+    {
+      "name": "fn-unixToHumanReadable.js",
+      "url": "fn-unixToHumanReadable.js"
     },
     {
       "name": "totallydifferentclock.img",

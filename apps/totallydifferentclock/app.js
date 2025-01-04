@@ -1,4 +1,5 @@
 const storage = require("Storage");
+const calculateSum = require('fn-unixToHumanReadable.js').calculateSum;
 
 // Constants for the API URL
 const config = storage.readJSON('weather-key.json', 1);
@@ -56,7 +57,7 @@ function fetchWeather() {
         logDebug("Starting weather fetch from " + API_URL);
         Bangle.http(API_URL)
             .then(response => {
-                logDebug("Weather response payload received stringify: " + JSON.stringify(response));
+                // logDebug("Weather response payload received stringify: " + JSON.stringify(response));
                 const responseStringified = JSON.stringify(response);
                 const responseParsed = JSON.parse(responseStringified);
                 logDebug("Printujem resp: " + responseParsed.resp);
@@ -89,6 +90,8 @@ function fetchWeather() {
             logDebug("Keys in weatherData:" + Object.keys(weatherData));
             logDebug("Current weather data:" + weatherData.current);
             logDebug("Current temperature:" + weatherData.current.temp); // Access temperature here
+            currentTemp = weatherData.current.temp;
+            sunsetTime = unixToHumanReadable(weatherData.current.sunset);
         } catch (error) {
             logDebug("Error processing weather payload:" + error);
         }
@@ -165,7 +168,7 @@ function onScreenTap() {
 function unixToHumanReadable(unixTimestamp) {
     const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
     logDebug("Converting Unix timestamp to human readable format: " + date);
-    return date.getHours();
+    return date.getHours() + ":" + date.getMinutes();
 }
 
 // Attach the tap event handler
@@ -182,6 +185,8 @@ setInterval(drawClock, 60000);
 
 // Optionally, refresh weather every 1.5 minutes
 setInterval(fetchWeather, 1.5 * 60 * 1000);
+
+logDebug(calculateSum(10, 20)); // 30
 
 
 // Show launcher when button pressed
