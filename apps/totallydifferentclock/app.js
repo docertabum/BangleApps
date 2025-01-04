@@ -57,10 +57,10 @@ function fetchWeather() {
         Bangle.http(API_URL)
             .then(response => {
                 logDebug("Weather response payload received stringify: " + JSON.stringify(response));
-                const jeden = JSON.stringify(response);
-                const jedenParsed = JSON.parse(response);
-                logDebug("Printujem dva: " + jedenParsed.resp);
-                const weatherData = JSON.parse(jedenParsed.resp);
+                const responseStringified = JSON.stringify(response);
+                const responseParsed = JSON.parse(responseStringified);
+                logDebug("Printujem resp: " + responseParsed.resp);
+                const weatherData = JSON.parse(responseParsed.resp);
 
                 currentTemp = weatherData.current.temp;
                 sunsetTime = unixToHumanReadable(weatherData.current.sunset);
