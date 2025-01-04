@@ -2,7 +2,7 @@
   "id": "totallydifferentclock",
   "name": "Moje hodinky",
   "shortName": "TotalClock",
-  "version": "0.40",
+  "version": "0.41",
   "description": "Dajaky deskripsn",
   "icon": "icon.png",
   "type": "clock",
@@ -21,8 +21,12 @@
       "url": "fn-unixToHumanReadable.js"
     },
     {
-      "name": "fn-calculateSum.js",
-      "url": "fn-calculateSum.js"
+      "name": "fn-logDebug.js",
+      "url": "fn-logDebug.js"
+    },
+    {
+      "name": "fn-loadNamedays.js",
+      "url": "fn-loadNamedays.js"
     },
     {
       "name": "totallydifferentclock.img",

@@ -1,43 +1,16 @@
 const storage = require("Storage");
-const calculateSum = require('fn-calculateSum.js').calculateSum;
 const unixToHumanReadable = require('fn-unixToHumanReadable.js').unixToHumanReadable;
+const logDebug = require('fn-logDebug.js').logDebug;
+const loadNamedays = require('fn-loadNamedays.js').loadNamedays;
 
 // Constants for the API URL
 const config = storage.readJSON('weather-key.json', 1);
 const API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=49.2946&lon=21.275&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
 
-// Variables for namedays and weather
-let namedays;
 let isShortVersion = true;  // Track whether we're using the short or long version
+let namedays = loadNamedays(isShortVersion);
 let currentTemp = null;
 let sunsetTime = null;
-
-// debuging
-// Define the log file name
-const LOG_FILE = "debug.log";
-
-// Function to write a debug message to a file
-function logDebug(message) {
-    let logEntry = new Date().toISOString() + " - " + message + "\n";
-
-    // Read the existing log file, if it exists
-    let existingLog = storage.read(LOG_FILE) || "";
-
-    // Append the new log entry
-    storage.write(LOG_FILE, existingLog + logEntry);
-}
-
-// Function to load nameday JSON file
-function loadNamedays() {
-    logDebug("Loading namedays...");
-    let fileName = isShortVersion ? "meniny-short.json" : "meniny-long.json";
-    try {
-        namedays = storage.readJSON(fileName, 1);
-    } catch (e) {
-        logDebug("Failed to load namedays data from " + fileName);
-        namedays = {};  // Fallback in case of error
-    }
-}
 
 // Function to get the nameday for the current date
 function getNameday() {
@@ -99,24 +72,6 @@ function fetchWeather() {
     }
 }
 
-// Function to draw the weather data on the screen
-function drawWeather(temp, sunsetTime) {
-    logDebug("Drawing weather on the screen: " + temp + " " + sunsetTime);
-    g.clear();
-
-    // Display temperature at the top
-    g.setFont("Vector", 40);      // Set large font size for temperature
-    g.setFontAlign(0, 0);         // Center alignment
-    g.drawString(temp !== null ? `${temp.toFixed(1)}°C` : "Loading temp...", g.getWidth() / 2, g.getHeight() / 4); // Draw in upper part
-
-    // Display sunset time at the bottom
-    g.setFont("Vector", 30);      // Set font size for sunset time
-    g.drawString(sunsetTime !== null ? `Sunset: ${sunsetTime}` : "Loading sunset...", g.getWidth() / 2, (3 * g.getHeight()) / 4); // Draw in lower part
-
-    // Update display
-    g.flip();
-}
-
 // Function to draw the clock, nameday, and weather
 function drawClock() {
     logDebug("Drawing the clock...");
@@ -159,8 +114,8 @@ function onScreenTap() {
     // Toggle between short and long versions of the nameday
     isShortVersion = !isShortVersion;
 
-    // Reload the nameday data
-    loadNamedays();
+    // Load short/long version of the nameday data
+    namedays = loadNamedays(isShortVersion);
 
     // Redraw the clock with updated nameday and font size
     drawClock();
@@ -170,7 +125,7 @@ function onScreenTap() {
 Bangle.on('touch', onScreenTap);
 
 // Initial loading of namedays
-loadNamedays();
+//loadNamedays(isShortVersion);
 
 // Fetch weather data when the app starts
 // fetchWeather();
@@ -180,9 +135,6 @@ setInterval(drawClock, 60000);
 
 // Optionally, refresh weather every 1.5 minutes
 setInterval(fetchWeather, 1.5 * 60 * 1000);
-
-logDebug(calculateSum(10, 20)); // 30
-
 
 // Show launcher when button pressed
 Bangle.setUI("clock");
