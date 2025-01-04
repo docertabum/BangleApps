@@ -60,15 +60,11 @@ function fetchWeather() {
                 const jeden = JSON.stringify(response);
                 const jedenParsed = JSON.parse(jeden);
                 logDebug("Printujem dva: " + jedenParsed.resp);
-                const tri = JSON.parse(jedenParsed.resp);
-                logDebug("Printujem teplotu: " + tri.current.temp);
-                logDebug("Printujem sunset: " + unixToHumanReadable(tri.current.sunset));
-                logDebug("Printujem tri: " + tri);
-                logDebug("Weather response payload received parse: " + JSON.parse(response));
-                const parsedResponse = JSON.parse(response);
-                const weatherData = JSON.parse(parsedResponse.resp);
-                logDebug("Weather data:" + weatherData);
-                logDebug("Weather data parsed:" + JSON.parse(weatherData));
+                const weatherData = JSON.parse(jedenParsed.resp);
+                logDebug("Printujem teplotu: " + weatherData.current.temp);
+                logDebug("Printujem sunset: " + unixToHumanReadable(weatherData.current.sunset));
+                logDebug("Printujem tri: " + weatherData);
+
                 currentTemp = weatherData.current.temp;
                 sunsetTime = unixToHumanReadable(weatherData.current.sunset);
                 // drawWeather(currentTemp, sunsetTime);
@@ -182,7 +178,8 @@ function onScreenTap() {
 
 function unixToHumanReadable(unixTimestamp) {
     const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
-    return date.toLocaleString(); // Adjust locale and options as needed
+    logDebug("Converting Unix timestamp to human readable format: " + date);
+    return date.getDate();
 }
 
 // Attach the tap event handler
