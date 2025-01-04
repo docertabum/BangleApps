@@ -95,17 +95,6 @@ function fetchWeather() {
     }
 }
 
-function performHttpBin() {
-    logDebug("Performing HTTP request to httpbin.org...");
-    Bangle.http("https://httpbin.org/get")
-        .then(response => {
-            logDebug("Response: " + JSON.parse(response));
-        })
-        .catch(error => {
-            logDebug("Error: " + error);
-        });
-}
-
 // Function to draw the weather data on the screen
 function drawWeather(temp, sunsetTime) {
     logDebug("Drawing weather on the screen: " + temp + " " + sunsetTime);
@@ -176,7 +165,7 @@ function onScreenTap() {
 function unixToHumanReadable(unixTimestamp) {
     const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
     logDebug("Converting Unix timestamp to human readable format: " + date);
-    return date.toLocaleDateString("sk-SK");
+    return date.getHours();
 }
 
 // Attach the tap event handler
