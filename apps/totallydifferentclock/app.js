@@ -1,5 +1,6 @@
 const storage = require("Storage");
-const calculateSum = require('fn-unixToHumanReadable.js').calculateSum;
+const calculateSum = require('fn-calculateSum.js').calculateSum;
+const unixToHumanReadable = require('fn-unixToHumanReadable.js').unixToHumanReadable;
 
 // Constants for the API URL
 const config = storage.readJSON('weather-key.json', 1);
@@ -163,12 +164,6 @@ function onScreenTap() {
 
     // Redraw the clock with updated nameday and font size
     drawClock();
-}
-
-function unixToHumanReadable(unixTimestamp) {
-    const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
-    logDebug("Converting Unix timestamp to human readable format: " + date);
-    return date.getHours() + ":" + date.getMinutes();
 }
 
 // Attach the tap event handler
