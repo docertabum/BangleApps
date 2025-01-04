@@ -58,9 +58,9 @@ function fetchWeather() {
             .then(response => {
                 logDebug("Weather response payload received stringify: " + JSON.stringify(response));
                 const jeden = JSON.stringify(response);
-                const dva = JSON.parse(jeden);
-                logDebug("Printujem dva: " + dva);
-                const tri = JSON.parse(dva);
+                const jedenParsed = JSON.parse(jeden);
+                logDebug("Printujem dva: " + jedenParsed.resp);
+                const tri = JSON.parse(jedenParsed.resp);
                 logDebug("Printujem tri: " + tri);
                 logDebug("Weather response payload received parse: " + JSON.parse(response));
                 const parsedResponse = JSON.parse(response);
@@ -77,7 +77,7 @@ function fetchWeather() {
             });
     } else {
         logDebug("Weather fetch disabled. Mocking the weather...");
-        const weatherPayload = '{"t":"http","id":"40326619772","resp":"{\\"lat\\":49.2946,\\"lon\\":21.275,\\"timezone\\":\\"Europe/Bratislava\\",\\"timezone_offset\\":7200,\\"current\\":{\\"dt\\":1726233366,\\"sunrise\\":1726200524,\\"sunset\\":1726246381,\\"temp\\":24.8,\\"feels_like\\":24.48,\\"pressure\\":1003,\\"humidity\\":44,\\"dew_point\\":11.73,\\"uvi\\":2.4,\\"clouds\\":100,\\"visibility\\":10000,\\"wind_speed\\":2.26,\\"wind_deg\\":139,\\"wind_gust\\":4.89,\\"weather\\":[{\\"id\\":500,\\"main\\":\\"Rain\\",\\"description\\":\\"light rain\\",\\"icon\\":\\"10d\\"}],\\"rain\\":{\\"1h\\":0.17}}}"}';
+        const weatherPayload = '{"t":"http","id":"90505003137","resp":"{\\"lat\\":49.2946,\\"lon\\":21.275,\\"timezone\\":\\"Europe/Bratislava\\",\\"timezone_offset\\":3600,\\"current\\":{\\"dt\\":1735949164,\\"sunrise\\":1735972189,\\"sunset\\":1736002171,\\"temp\\":-0.32,\\"feels_like\\":-2.92,\\"pressure\\":1015,\\"humidity\\":89,\\"dew_point\\":-1.72,\\"uvi\\":0,\\"clouds\\":31,\\"visibility\\":10000,\\"wind_speed\\":2.07,\\"wind_deg\\":271,\\"wind_gust\\":3.43,\\"weather\\":[{\\"id\\":802,\\"main\\":\\"Clouds\\",\\"description\\":\\"scattered clouds\\",\\"icon\\":\\"03n\\"}]},\\"alerts\\":[{\\"sender_name\\":\\"Slovensk\u00FD Hydrometeorologick\u00FD \u00FAstav\\",\\"event\\":\\"Moderate icing warning\\",\\"start\\":1735924500,\\"end\\":1735977600,\\"description\\":\\"We expect icing in district Bardejov.\\\\nGround ice represents potential risk for human activities.\\",\\"tags\\":[\\"Snow/Ice\\"]},{\\"sender_name\\":\\"Slovensk\u00FD Hydrometeorologick\u00FD \u00FAstav\\",\\"event\\":\\"Moderate warning\\",\\"start\\":1735935900,\\"end\\":1735974000,\\"description\\":\\"We expect snow-drifts in district Bardejov.\\\\nSnow-drifts represent potential risk for transport activities.\\",\\"tags\\":[\\"Other dangers\\"]},{\\"sender_name\\":\\"Slovensk\u00FD Hydrometeorologick\u00FD \u00FAstav\\",\\"event\\":\\"Moderate low temperature warning\\",\\"start\\":1736103600,\\"end\\":1736136000,\\"description\\":\\"We expect frost -15 - -16 \u00B0C in district Bardejov,\\\\nthat represents potential risk for human health during outdoor activities.\\",\\"tags\\":[\\"Extreme low temperature\\"]},{\\"sender_name\\":\\"Slovensk\u00FD Hydrometeorologick\u00FD \u00FAstav\\",\\"event\\":\\"Moderate icing warning\\",\\"start\\":1736092800,\\"end\\":1736161200,\\"description\\":\\"We expect icing in district Bardejov.\\\\nGround ice represents potential risk for human activities.\\",\\"tags\\":[\\"Snow/Ice\\"]}]}"}';
 
         try {
             logDebug("Weather payload before parsing:\n" + weatherPayload);
