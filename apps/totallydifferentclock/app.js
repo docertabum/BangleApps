@@ -61,6 +61,8 @@ function fetchWeather() {
                 const jedenParsed = JSON.parse(jeden);
                 logDebug("Printujem dva: " + jedenParsed.resp);
                 const tri = JSON.parse(jedenParsed.resp);
+                logDebug("Printujem teplotu: " + tri.current.temp);
+                logDebug("Printujem sunset: " + unixToHumanReadable(tri.current.sunset));
                 logDebug("Printujem tri: " + tri);
                 logDebug("Weather response payload received parse: " + JSON.parse(response));
                 const parsedResponse = JSON.parse(response);
