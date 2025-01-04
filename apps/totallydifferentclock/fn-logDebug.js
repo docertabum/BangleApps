@@ -9,5 +9,16 @@ exports.logDebug = (message) => {
     // Read the existing log file, if it exists
     let existingLog = storage.read(LOG_FILE) || "";
     // Append the new log entry
+
+    // Check if the log file exceeds 10,000 bytes
+    if (existingLog.length > 10000) {
+        // Split the log into lines
+        let logLines = existingLog.split("\n");
+        // Remove the first ten lines
+        logLines = logLines.slice(10);
+        // Join the remaining lines back into a string
+        existingLog = logLines.join("\n");
+    }
+
     storage.write(LOG_FILE, existingLog + logEntry);
 }

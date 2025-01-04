@@ -2,6 +2,7 @@ const storage = require("Storage");
 const unixToHumanReadable = require('fn-unixToHumanReadable.js').unixToHumanReadable;
 const logDebug = require('fn-logDebug.js').logDebug;
 const loadNamedays = require('fn-loadNamedays.js').loadNamedays;
+const getGPS = require('fn-getGPS.js').getGPS;
 
 // Constants for the API URL
 const config = storage.readJSON('weather-key.json', 1);
@@ -27,6 +28,7 @@ function getNameday() {
 
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
+    getGPS();
     if (true) {
         logDebug("Starting weather fetch from " + API_URL);
         Bangle.http(API_URL)
@@ -86,15 +88,17 @@ function drawClock() {
     const timeStr = ("0" + hours).substr(-2) + ":" + ("0" + minutes).substr(-2);
 
     // Display time at the top
-    g.setFont("Vector", 40);      // Set font size for the clock
-    g.setFontAlign(0, 0);         // Center alignment
-    g.drawString(timeStr, g.getWidth() / 2, g.getHeight() / 8); // Draw in upper part
+    g.setBgColor(1, 1, 1); // White background
+    g.setColor(0, 0, 0);   // Black text                                // Set background color
+    g.setFont("Vector", 40);                                   // Set font size for the clock
+    g.setFontAlign(0, 0);                                           // Center alignment
+    g.drawString(timeStr, g.getWidth() / 2, g.getHeight() / 8);    // Draw in upper part
 
     // Display nameday
     const nameday = getNameday();
-    const fontSize = isShortVersion ? 30 : 15;  // 30 for short version, 15 for long version
-    g.setFont("Vector", fontSize);   // Set the appropriate font size
-    g.drawString(nameday, g.getWidth() / 2, g.getHeight() / 2); // Draw in middle part
+    const fontSize = isShortVersion ? 30 : 15;                      // 30 for short version, 15 for long version
+    g.setFont("Vector", fontSize);                                    // Set the appropriate font size
+    g.drawString(nameday, g.getWidth() / 2, g.getHeight() / 2);     // Draw in middle part
 
     // Display weather (temperature and sunset) at the bottom
     if (currentTemp !== null && sunsetTime !== null) {
