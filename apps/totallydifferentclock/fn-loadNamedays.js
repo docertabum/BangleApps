@@ -1,5 +1,5 @@
 const storage = require("Storage");
-const {logDebug} = require("./fn-logDebug");
+const logDebug = require('fn-logDebug.js').logDebug;
 
 // Function to load nameday JSON file
 exports.loadNamedays = (isShortVersion) => {
