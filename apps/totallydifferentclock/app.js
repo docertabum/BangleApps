@@ -58,12 +58,9 @@ function fetchWeather() {
             .then(response => {
                 logDebug("Weather response payload received stringify: " + JSON.stringify(response));
                 const jeden = JSON.stringify(response);
-                const jedenParsed = JSON.parse(jeden);
+                const jedenParsed = JSON.parse(response);
                 logDebug("Printujem dva: " + jedenParsed.resp);
                 const weatherData = JSON.parse(jedenParsed.resp);
-                logDebug("Printujem teplotu: " + weatherData.current.temp);
-                logDebug("Printujem sunset: " + unixToHumanReadable(weatherData.current.sunset));
-                logDebug("Printujem tri: " + weatherData);
 
                 currentTemp = weatherData.current.temp;
                 sunsetTime = unixToHumanReadable(weatherData.current.sunset);
@@ -179,7 +176,7 @@ function onScreenTap() {
 function unixToHumanReadable(unixTimestamp) {
     const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
     logDebug("Converting Unix timestamp to human readable format: " + date);
-    return date.getDate();
+    return date.toLocaleDateString("sk-SK");
 }
 
 // Attach the tap event handler
@@ -187,8 +184,6 @@ Bangle.on('touch', onScreenTap);
 
 // Initial loading of namedays
 loadNamedays();
-
-performHttpBin();
 
 // Fetch weather data when the app starts
 // fetchWeather();
