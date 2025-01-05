@@ -89,7 +89,7 @@ function drawClock() {
 
     // Display time at the top
     g.setBgColor(1, 1, 1); // White background
-    g.setColor(0, 0, 0);   // Black text                                // Set background color
+    g.setColor("ffffff");   // Black text                                // Set background color
     g.setFont("Vector", 40);                                   // Set font size for the clock
     g.setFontAlign(0, 0);                                           // Center alignment
     g.drawString(timeStr, g.getWidth() / 2, g.getHeight() / 8);    // Draw in upper part
