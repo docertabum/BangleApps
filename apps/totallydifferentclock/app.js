@@ -88,7 +88,7 @@ function drawClock() {
     const timeStr = ("0" + hours).substr(-2) + ":" + ("0" + minutes).substr(-2);
 
     // Display time at the top
-    g.setBgColor(1, 1, 1); // White background
+    g.setBgColor("000000"); // White background
     g.setColor("ffffff");   // Black text                                // Set background color
     g.setFont("Vector", 40);                                   // Set font size for the clock
     g.setFontAlign(0, 0);                                           // Center alignment
