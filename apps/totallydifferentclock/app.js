@@ -20,7 +20,7 @@ function fetchWeather() {
         gps = gpsData; // Store GPS data for later use
         logDebug("GPS data: " + JSON.stringify(gpsData));
         if (gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
-            let API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${gpsData.lat}&lon=${gpsData.lon}&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
+            let API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${gps.lat}&lon=${gps.lon}&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
             logDebug("Starting weather fetch from " + API_URL);
             Bangle.http(API_URL)
                 .then(response => {
