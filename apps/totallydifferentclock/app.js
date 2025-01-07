@@ -32,11 +32,9 @@ function fetchWeather() {
 
                     currentTemp = weatherData.current.temp;
                     sunsetTime = unixToHumanReadable(weatherData.current.sunset);
-                    // drawWeather(currentTemp, sunsetTime);
                 })
                 .catch(error => {
                     logDebug("Error fetching weather data: " + error);
-                    // drawWeather(null, null);
                 });
         } else {
             logDebug("Weather fetch disabled. Mocking the weather...");
@@ -75,7 +73,7 @@ function onScreenTap() {
     namedays = loadNamedays(isShortVersion);
 
     // Redraw the clock with updated nameday and font size
-    drawClock(isShortVersion, currentTemp, sunsetTime, gpsData);
+    drawClock(isShortVersion, currentTemp, sunsetTime, gps);
 }
 
 // Attach the tap event handler
