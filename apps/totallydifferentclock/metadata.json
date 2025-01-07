@@ -2,7 +2,7 @@
   "id": "totallydifferentclock",
   "name": "Moje hodinky",
   "shortName": "TotalClock",
-  "version": "0.44",
+  "version": "0.45",
   "description": "Dajaky deskripsn",
   "icon": "icon.png",
   "type": "clock",
@@ -25,12 +25,16 @@
       "url": "fn-logDebug.js"
     },
     {
-      "name": "fn-getGPS.js",
-      "url": "fn-getGPS.js"
+      "name": "fn-gpsService.js",
+      "url": "fn-gpsService.js"
     },
     {
-      "name": "fn-loadNamedays.js",
-      "url": "fn-loadNamedays.js"
+      "name": "fn-drawClock.js",
+      "url": "fn-drawClock.js"
+    },
+    {
+      "name": "fn-calendarService.js",
+      "url": "fn-calendarService.js"
     },
     {
       "name": "totallydifferentclock.img",
