@@ -7,19 +7,20 @@ const drawClock = require('fn-drawClock.js').drawClock;
 
 // Constants for the API URL
 const config = storage.readJSON('weather-key.json', 1);
-const API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${gpsData.lat}&lon=${gpsData.lon}&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
 
 let isShortVersion = true;  // Track whether we're using the short or long version
 let namedays = loadNamedays(isShortVersion);
 let currentTemp = null;
 let sunsetTime = null;
-let gpsData = null;
+let gps = null;
 
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
     getGPS().then((gpsData) => {
+        gps = gpsData; // Store GPS data for later use
         logDebug("GPS data: " + JSON.stringify(gpsData));
         if (gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
+            let API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${gpsData.lat}&lon=${gpsData.lon}&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
             logDebug("Starting weather fetch from " + API_URL);
             Bangle.http(API_URL)
                 .then(response => {
@@ -97,4 +98,4 @@ Bangle.setUI("clock");
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 // Draw immediately when the app starts
-drawClock(isShortVersion, currentTemp, sunsetTime, gpsData);
+drawClock(isShortVersion, currentTemp, sunsetTime, gps);
