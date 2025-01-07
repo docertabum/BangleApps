@@ -36,7 +36,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData) => {
     } else {
         g.drawString("Loading weather...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
-    if (gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
+    if (gpsData !== undefined && gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
         g.drawString("GPS: " + gpsData, g.getWidth() / 2, (6 * g.getHeight()) / 8);
     } else {
         g.drawString("GPS data missing...", g.getWidth() / 2, (6 * g.getHeight()) / 8);
