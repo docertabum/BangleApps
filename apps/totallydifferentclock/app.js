@@ -1,8 +1,8 @@
 const storage = require("Storage");
 const unixToHumanReadable = require('fn-unixToHumanReadable.js').unixToHumanReadable;
 const logDebug = require('fn-logDebug.js').logDebug;
-const loadNamedays = require('apps/totallydifferentclock/fn-calendarService.js').resolveCalendarData;
-const getGPS = require('apps/totallydifferentclock/fn-gpsServise.js').getGPS;
+const loadNamedays = require('fn-calendarService.js').resolveCalendarData;
+const getGPS = require('fn-gpsServise.js').getGPS;
 const drawClock = require('fn-drawClock.js').drawClock;
 
 // Constants for the API URL

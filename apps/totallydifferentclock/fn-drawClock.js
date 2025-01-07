@@ -1,6 +1,6 @@
 const logDebug = require('fn-logDebug.js').logDebug;
-const getNameday = require('apps/totallydifferentclock/fn-calendarService.js').getNameday;
-const resolveCalendarData = require('apps/totallydifferentclock/fn-calendarService.js').resolveCalendarData;
+const getNameday = require('fn-calendarService.js').getNameday;
+const resolveCalendarData = require('fn-calendarService.js').resolveCalendarData;
 
 
 // Function to draw the clock, nameday, and weather
