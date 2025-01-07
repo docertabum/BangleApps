@@ -31,7 +31,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData) => {
 
     // Display weather (temperature and sunset) at the bottom
     g.setFont("Vector", 10);
-    if (currentTemp !== null && sunsetTime !== null) {
+    if (currentTemp !== null && currentTemp !== undefined && sunsetTime !== null) {
         g.drawString(`${currentTemp.toFixed(1)}°C, Sunset: ${sunsetTime}`, g.getWidth() / 2, (7 * g.getHeight()) / 8);
     } else {
         g.drawString("Loading weather...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
