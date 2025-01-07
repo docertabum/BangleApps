@@ -17,9 +17,9 @@ let gps = null;
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
     getGPS().then((gpsData) => {
-        gps = gpsData; // Store GPS data for later use
+        gps = JSON.parse(gpsData); // Store GPS data for later use
         logDebug("GPS data: " + JSON.stringify(gpsData));
-        if (gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
+        if (gps !== null && gps.lat !== 0 && gps.lon !== 0) {
             let API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${gps.lat}&lon=${gps.lon}&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
             logDebug("Starting weather fetch from " + API_URL);
             Bangle.http(API_URL)
