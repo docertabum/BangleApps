@@ -16,7 +16,7 @@ let gps = null;
 
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
-    getGPS(15000, "totallydifferentclock")
+    getGPS()
         .then((gpsData) => {
             gps = JSON.parse(gpsData); // Store GPS data for later use
             logDebug("GPS.lon data: " + gps.lon);
