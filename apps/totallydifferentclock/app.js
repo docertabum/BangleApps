@@ -86,7 +86,9 @@ Bangle.on('touch', onScreenTap);
 // fetchWeather();
 
 // Refresh the clock every minute
-setInterval(drawClock, 60000);
+setInterval(() => {
+    drawClock(isShortVersion, currentTemp, sunsetTime, gps);
+}, 60000);
 
 // Optionally, refresh weather every 1.5 minutes
 setInterval(fetchWeather, 1.5 * 60 * 1000);
