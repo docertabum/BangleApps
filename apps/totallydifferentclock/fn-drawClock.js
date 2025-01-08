@@ -1,4 +1,4 @@
-const unixToHumanReadable = require('fn-unixToHumanReadable').unixToHumanReadable;
+const unixToHumanReadable = require('fn-unixToHumanReadable.js').unixToHumanReadable;
 const logDebug = require('fn-logDebug.js').logDebug;
 const getNameday = require('fn-calendarService.js').getNameday;
 const resolveCalendarData = require('fn-calendarService.js').resolveCalendarData;
