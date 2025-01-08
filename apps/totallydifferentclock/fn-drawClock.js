@@ -1,10 +1,11 @@
+const unixToHumanReadable = require('fn-unixToHumanReadable').unixToHumanReadable;
 const logDebug = require('fn-logDebug.js').logDebug;
 const getNameday = require('fn-calendarService.js').getNameday;
 const resolveCalendarData = require('fn-calendarService.js').resolveCalendarData;
 
 
 // Function to draw the clock, nameday, and weather
-exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData) => {
+exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUpdatedAt) => {
     logDebug("Drawing the clock...");
     g.clear();
 
@@ -31,16 +32,24 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData) => {
 
     // Display weather (temperature and sunset) at the bottom
     g.setFont("Vector", 10);
-    if (currentTemp !== null && currentTemp !== undefined && sunsetTime !== null) {
-        g.drawString(`${currentTemp.toFixed(1)}°C, Sunset: ${sunsetTime}`, g.getWidth() / 2, (7 * g.getHeight()) / 8);
-    } else {
-        g.drawString("Loading weather...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
-    }
     if (gpsData !== undefined && gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
         g.drawString("GPS: " + gpsData, g.getWidth() / 2, (6 * g.getHeight()) / 8);
     } else {
         g.drawString("GPS data missing...", g.getWidth() / 2, (6 * g.getHeight()) / 8);
     }
+
+    if (currentTemp !== null && currentTemp !== undefined && sunsetTime !== null) {
+        g.drawString(`${currentTemp.toFixed(1)}°C, Sunset: ${sunsetTime}`, g.getWidth() / 2, (7 * g.getHeight()) / 8);
+    } else {
+        g.drawString("Loading weather...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
+    }
+
+    if (weatherUpdatedAt !== null && weatherUpdatedAt !== undefined) {
+        g.drawString("Updated at: " + unixToHumanReadable(weatherUpdatedAt), g.getWidth() / 2, (8 * g.getHeight()) / 8);
+    } else {
+        g.drawString("Update time unknown...", g.getWidth() / 2, (8 * g.getHeight()) / 8);
+    }
+
 
     // Update display
     g.flip();

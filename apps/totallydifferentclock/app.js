@@ -13,6 +13,7 @@ let namedays = loadNamedays(isShortVersion);
 let currentTemp = null;
 let sunsetTime = null;
 let gps = null;
+let weatherUpdatedAt = null;
 
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
@@ -37,6 +38,7 @@ function fetchWeather() {
 
                         currentTemp = weatherData.current.temp;
                         sunsetTime = unixToHumanReadable(weatherData.current.sunset);
+                        weatherUpdatedAt = new Date().getTime();
                     })
                     .catch(error => {
                         logDebug("Error fetching weather data: " + error);
@@ -81,7 +83,7 @@ function onScreenTap() {
     namedays = loadNamedays(isShortVersion);
 
     // Redraw the clock with updated nameday and font size
-    drawClock(isShortVersion, currentTemp, sunsetTime, gps);
+    drawClock(isShortVersion, currentTemp, sunsetTime, gps, weatherUpdatedAt);
 }
 
 // Attach the tap event handler
@@ -95,7 +97,7 @@ Bangle.on('touch', onScreenTap);
 
 // Refresh the clock every minute
 setInterval(() => {
-    drawClock(isShortVersion, currentTemp, sunsetTime, gps);
+    drawClock(isShortVersion, currentTemp, sunsetTime, gps, weatherUpdatedAt);
 }, 60000);
 
 // Optionally, refresh weather every 1.5 minutes
@@ -106,4 +108,4 @@ Bangle.setUI("clock");
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 // Draw immediately when the app starts
-drawClock(isShortVersion, currentTemp, sunsetTime, gps);
+drawClock(isShortVersion, currentTemp, sunsetTime, gps, weatherUpdatedAt);
