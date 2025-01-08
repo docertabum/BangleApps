@@ -16,11 +16,15 @@ let gps = null;
 
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
+    logDebug("Fetching weather data...");
     getGPS()
         .then((gpsData) => {
+            logDebug("Fetching with gps data: " + JSON.stringify(gpsData));
+            let gpsString = JSON.stringify(gpsData);
+            let gpsJson = JSON.parse(gpsString);
+            console.log("GPS data: " + gpsJson.lon);
             gps = JSON.parse(gpsData); // Store GPS data for later use
             logDebug("GPS.lon data: " + gps.lon);
-            logDebug("GPS data: " + JSON.stringify(gpsData));
             if (gps.lat !== 0 && gps.lon !== 0) {
                 let API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${gps.lat}&lon=${gps.lon}&units=metric&exclude=minutely,hourly,daily&appid=${config.appid}`;
                 logDebug("Starting weather fetch from " + API_URL);
