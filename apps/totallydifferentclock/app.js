@@ -40,7 +40,7 @@ function fetchWeather() {
 
                         currentTemp = weatherData.current.temp;
                         sunsetTime = unixToHumanReadable(weatherData.current.sunset);
-                        weatherUpdatedAt = new Date().getTime();
+                        weatherUpdatedAt = gps.time;
                     })
                     .catch(error => {
                         logDebug("Error fetching weather data: " + error);
@@ -88,6 +88,9 @@ function onScreenTap() {
     drawClock(isShortVersion, currentTemp, sunsetTime, gps, weatherUpdatedAt);
 }
 
+// Clear the screen once, at startup
+g.clear();
+
 // Attach the tap event handler
 Bangle.on('touch', onScreenTap);
 
@@ -111,3 +114,4 @@ Bangle.loadWidgets();
 Bangle.drawWidgets();
 // Draw immediately when the app starts
 drawClock(isShortVersion, currentTemp, sunsetTime, gps, weatherUpdatedAt);
+logDebug("--------------- Totally Different Clock app started.--------------------");

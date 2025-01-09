@@ -50,8 +50,10 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
         g.drawString("Update time unknown...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
 
-    g.drawLine(0, g.getHeight() - 1, g.getWidth(), g.getHeight() - 2); // Draw a line at the bottom
     g.drawString("Bottom line", g.getWidth() / 2, g.getHeight() - 6); // Draw at the bottom
+
+    g.drawLine(0, g.getHeight() - 1, g.getWidth(), g.getHeight() - 2); // Draw a line at the bottom
+
     // Update display
     g.flip();
 }
