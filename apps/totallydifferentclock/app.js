@@ -18,7 +18,7 @@ let weatherUpdatedAt = null;
 
 // Function to convert Unix timestamp to HH:MM format
 function fetchWeather() {
-    if (isWeatherOld(weatherUpdatedAt, new Date().getTime())) return;
+    if (!isWeatherOld(weatherUpdatedAt, new Date().getTime())) return;
     logDebug("Fetching weather data...");
     getGPS()
         .then((gpsData) => {
