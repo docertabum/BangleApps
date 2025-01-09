@@ -4,7 +4,7 @@ const getNameday = require('fn-calendarService.js').getNameday;
 const resolveCalendarData = require('fn-calendarService.js').resolveCalendarData;
 
 
-// Function to draw the clock, nameday, and weather
+// Function to draw the clock, nameday, and weather (176x176px)
 exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUpdatedAt) => {
     logDebug("Drawing the clock...");
     g.clear();
@@ -50,7 +50,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
         g.drawString("Update time unknown...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
 
-    logDebug("Display resolution is " + g.getWidth() + "x" + g.getHeight());
+    g.drawString("Bottom line", g.getWidth() / 2, g.getHeight() - 8); // Draw at the bottom
     // Update display
     g.flip();
 }
