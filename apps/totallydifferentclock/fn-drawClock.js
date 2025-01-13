@@ -38,20 +38,22 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
         g.drawString("GPS data missing...", g.getWidth() / 2, (5 * g.getHeight()) / 8);
     }
 
+    // Display current temperature and sunset time
     if (currentTemp !== null && currentTemp !== undefined && sunsetTime !== null) {
         g.drawString(`${currentTemp.toFixed(1)}°C, Sunset: ${sunsetTime}`, g.getWidth() / 2, (6 * g.getHeight()) / 8);
     } else {
         g.drawString("Loading weather...", g.getWidth() / 2, (6 * g.getHeight()) / 8);
     }
 
+    // Time when the weather was last updated
     if (weatherUpdatedAt !== null && weatherUpdatedAt !== undefined) {
         g.drawString("Updated at: " + unixToHumanReadable(weatherUpdatedAt), g.getWidth() / 2, (7 * g.getHeight()) / 8);
     } else {
         g.drawString("Update time unknown...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
 
+    // Draw a line at the bottom and top
     g.drawString("Bottom line", g.getWidth() / 2, g.getHeight() - 6); // Draw at the bottom
-
     g.drawLine(0, g.getHeight() - 1, g.getWidth(), g.getHeight() - 2); // Draw a line at the bottom
 
     // Update display

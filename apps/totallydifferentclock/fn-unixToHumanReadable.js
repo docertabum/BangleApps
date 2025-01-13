@@ -1,7 +1,9 @@
 const logDebug = require('fn-logDebug.js').logDebug;
 
 exports.unixToHumanReadable = (unixTimestamp) => {
-    const date = new Date(unixTimestamp * 1000); // Multiply by 1000 to convert seconds to milliseconds
+    // Check if the timestamp is in milliseconds or seconds
+    const timestamp = unixTimestamp > 9999999999 ? unixTimestamp : unixTimestamp * 1000;
+    const date = new Date(timestamp);
     logDebug("Converting Unix timestamp to human readable format: " + date);
     return `${date.getHours()}:${date.getMinutes()}`;
 };
