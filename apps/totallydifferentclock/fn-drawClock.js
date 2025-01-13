@@ -54,6 +54,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
 
     // Draw a line at the bottom and top
     g.drawString("Bottom line", g.getWidth() / 2, g.getHeight() - 6); // Draw at the bottom
+    g.setColor(0.5,0,5,0.5);
     g.drawLine(0, g.getHeight() - 1, g.getWidth(), g.getHeight() - 2); // Draw a line at the bottom
 
     // Update display
