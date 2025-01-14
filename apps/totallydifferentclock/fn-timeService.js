@@ -19,3 +19,22 @@ exports.isWeatherOld = (unixTimestampOld, unixTimestampNew) => {
     return unixTimestampNew - unixTimestampOld > 120; // If the difference is more than 2 minutes, the weather is considered old
 };
 
+// convert ISO date ("2025-01-14T08:16:48.087Z") to time
+exports.isoToTime = (isoDate) => {
+    const date = new Date(isoDate);
+
+// Extract hours and minutes
+    const hours = date.getUTCHours(); // Use `getHours()` if you want the local time
+    const minutes = date.getUTCMinutes(); // Use `getMinutes()` for local time
+
+// Format as "hour:minute" with leading zero for minutes if needed
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+exports.isoTimeToUnixTime = (isoToTime) => {
+   // const isoDate = "2025-01-14T08:16:48.087Z";
+    const date = new Date(isoToTime);
+
+// Convert to milliseconds since Unix Epoch
+    return milliseconds = date.getTime();
+}
