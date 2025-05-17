@@ -33,7 +33,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
     // Display weather (temperature and sunset) at the bottom
     g.setFont("Vector", 10);
     if (gpsData !== undefined && gpsData !== null && gpsData.lat !== 0 && gpsData.lon !== 0) {
-        g.drawString("GPS: " + gpsData, g.getWidth() / 2, (5 * g.getHeight()) / 8);
+        g.drawString("GPS: " + gpsData.lon + " : " + gpsData.lat, g.getWidth() / 2, (5 * g.getHeight()) / 8);
     } else {
         g.drawString("GPS data missing...", g.getWidth() / 2, (5 * g.getHeight()) / 8);
     }
@@ -49,12 +49,13 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
     if (weatherUpdatedAt !== null && weatherUpdatedAt !== undefined) {
         g.drawString("Updated at: " + unixToHumanReadable(weatherUpdatedAt), g.getWidth() / 2, (7 * g.getHeight()) / 8);
     } else {
+        logDebug("Weather updated time is invalid???" + weatherUpdatedAt.toString());
         g.drawString("Update time unknown...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
 
     // Draw a line at the bottom and top
     g.drawString("Bottom line", g.getWidth() / 2, g.getHeight() - 6); // Draw at the bottom
-    g.setColor(0.5,0,5,0.5);
+    g.setColor(0.5, 0, 5, 0.5);
     g.drawLine(0, g.getHeight() - 1, g.getWidth(), g.getHeight() - 2); // Draw a line at the bottom
 
     // Update display

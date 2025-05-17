@@ -3,12 +3,17 @@ const LOG_FILE = "debug.log";
 
 // Function to write a debug message to a file
 exports.logDebug = (message) => {
+    // Get current date
     let date = new Date();
-    date.setHours(date.getHours() + 1);
-    let logEntry = date.toISOString() + " - " + message + "\n";
+
+    // Format date with local timezone offset
+    // This creates a more readable timestamp in local time
+    let timeStr = date.toLocaleString();
+
+    let logEntry = timeStr + " - " + message + "\n";
+
     // Read the existing log file, if it exists
     let existingLog = storage.read(LOG_FILE) || "";
-    // Append the new log entry
 
     // Check if the log file exceeds 10,000 bytes
     if (existingLog.length > 10000) {

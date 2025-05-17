@@ -36,5 +36,5 @@ exports.isoTimeToUnixTime = (isoToTime) => {
     const date = new Date(isoToTime);
 
 // Convert to milliseconds since Unix Epoch
-    return milliseconds = date.getTime();
+    return date.getTime();
 }
