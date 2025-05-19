@@ -26,7 +26,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
 
     // Display nameday
     const nameday = getNameday(resolveCalendarData(isShortVersion)); // Get nameday
-    const fontSize = isShortVersion ? 30 : 15;                      // 30 for short version, 15 for long version
+    const fontSize = isShortVersion ? 30 : 10;                      // 30 for short version, 15 for long version
     g.setFont("Vector", fontSize);                                    // Set the appropriate font size
     g.drawString(nameday, g.getWidth() / 2, g.getHeight() / 2);     // Draw in middle part
 
@@ -49,7 +49,7 @@ exports.drawClock = (isShortVersion, currentTemp, sunsetTime, gpsData, weatherUp
     if (weatherUpdatedAt !== null && weatherUpdatedAt !== undefined) {
         g.drawString("Updated at: " + unixToHumanReadable(weatherUpdatedAt), g.getWidth() / 2, (7 * g.getHeight()) / 8);
     } else {
-        logDebug("Weather updated time is invalid???" + weatherUpdatedAt.toString());
+        // logDebug("Weather updated time is invalid???" + weatherUpdatedAt.toString());
         g.drawString("Update time unknown...", g.getWidth() / 2, (7 * g.getHeight()) / 8);
     }
 
