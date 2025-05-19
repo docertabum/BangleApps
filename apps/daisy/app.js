@@ -1,11 +1,15 @@
 var SunCalc = require("suncalc"); // from modules folder
+const storage = require('Storage');
 const widget_utils = require('widget_utils');
+let settings = undefined;
+let location = undefined;
 const SETTINGS_FILE = "daisy.json";
+const global_settings = storage.readJSON("setting.json", true) || {};
 const LOCATION_FILE = "mylocation.json";
 const h = g.getHeight();
 const w = g.getWidth();
-let settings;
-let location;
+const rad = h/2;
+const hyp = Math.sqrt(Math.pow(rad, 2) + Math.pow(rad, 2));
 
 // variable for controlling idle alert
 let lastStep = getTime();
@@ -13,12 +17,16 @@ let warned = 0;
 let idle = false;
 let IDLE_MINUTES = 26;
 
-let pal1; // palette for 0-40%
+let pal1; // palette for 0-49%
 let pal2; // palette for 50-100%
 const infoLine = (3*h/4) - 6;
 const infoWidth = 56;
 const infoHeight = 11;
+const ringEdge = 4;
+const ringThick = 6;
+let nextUpdateMs;
 var drawingSteps = false;
+var prevRing = {start: null, end: null, max: null};
 
 function log_debug(o) {
   //print(o);
@@ -41,12 +49,12 @@ Graphics.prototype.setFontRoboto20 = function(scale) {
 
 function assignPalettes() {
   if (g.theme.dark) {
-    // palette for 0-40%
+    // palette for 0-49%
     pal1 = new Uint16Array([g.theme.bg, g.toColor(settings.gy), g.toColor(settings.fg), g.toColor("#00f")]);
     // palette for 50-100%
     pal2 = new Uint16Array([g.theme.bg, g.toColor(settings.fg), g.toColor(settings.gy), g.toColor("#00f")]);
   } else {
-    // palette for 0-40%
+    // palette for 0-49%
     pal1 = new Uint16Array([g.theme.bg, g.theme.fg, g.toColor(settings.fg), g.toColor("#00f")]);
     // palette for 50-100%
     pal2 = new Uint16Array([g.theme.bg, g.toColor(settings.fg), g.theme.fg, g.toColor("#00f")]);
@@ -84,6 +92,10 @@ function loadSettings() {
   settings.fg = settings.fg||'#0f0';
   settings.idle_check = (settings.idle_check === undefined ? true : settings.idle_check);
   settings.batt_hours = (settings.batt_hours === undefined ? false : settings.batt_hours);
+  settings.hr_12 = (global_settings["12hour"] === undefined ? false : global_settings["12hour"]);
+  settings.ring = settings.ring||'Steps';
+  settings.idxInfo = settings.idxInfo||0;
+  settings.step_target = settings.step_target||10000;
   assignPalettes();
 }
 
@@ -97,21 +109,67 @@ function loadLocation() {
 
 function extractTime(d){
   var h = d.getHours(), m = d.getMinutes();
+  if (settings.hr_12) {
+    h = h % 12;
+    if (h == 0) h = 12;
+  }
   return(("0"+h).substr(-2) + ":" + ("0"+m).substr(-2));
 }
 
 var sunRise = "00:00";
 var sunSet = "00:00";
 var drawCount = 0;
+var night; // In terms of minutes
+var sunStart;  // In terms of ms
+var sunEnd;  // In terms of minutes
+var sunFull;  // In terms of ms
+var isDaytime = true;
 
-function updateSunRiseSunSet(now, lat, lon, line){
+function getMinutesFromDate(date) {
+  return (60 * date.getHours()) + date.getMinutes();
+}
+
+function updateSunRiseSunSet(now, lat, lon, sunLeftCalcs){
   // get today's sunlight times for lat/lon
-  var times = SunCalc.getTimes(new Date(), lat, lon);
+  var times = SunCalc.getTimes(now, lat, lon);
+  var dateCopy = new Date(now.getTime());
 
   // format sunrise time from the Date object
   sunRise = extractTime(times.sunrise);
   sunSet = extractTime(times.sunset);
+  if (!sunLeftCalcs) return;
+
+  let sunLeft = times.sunset - dateCopy;
+  if (sunLeft <  0) {  // If it's already night
+    dateCopy.setDate(dateCopy.getDate() + 1);
+    let timesTmrw = SunCalc.getTimes(dateCopy, lat, lon);
+    isDaytime = false;
+    sunStart = times.sunset;
+    sunFull = timesTmrw.sunrise - sunStart;
+    sunEnd = getMinutesFromDate(timesTmrw.sunrise);
+    night = getMinutesFromDate(timesTmrw.sunriseEnd);
+  }
+  else {
+    sunLeft = dateCopy - times.sunrise;
+    if (sunLeft <  0) {  // If it's not morning yet.
+      dateCopy.setDate(dateCopy.getDate() - 1);
+      let timesYest = SunCalc.getTimes(dateCopy, lat, lon);
+      isDaytime = false;
+      sunStart = timesYest.sunset;
+      sunFull = times.sunrise - sunStart;
+      sunEnd = getMinutesFromDate(times.sunrise);
+      night = getMinutesFromDate(times.sunriseEnd);
+    }
+    else {  // We're in the middle of the day
+      isDaytime = true;
+      sunStart = times.sunriseEnd;
+      sunFull = times.sunsetStart - sunStart;
+      sunEnd = getMinutesFromDate(times.sunsetStart);
+      night = getMinutesFromDate(times.sunset);
+    }
+  }
 }
+
 
 function batteryString(){
   let stringToInsert;
@@ -150,28 +208,21 @@ const infoData = {
 };
 
 const infoList = Object.keys(infoData).sort();
-let infoMode = infoList[0];
 
-function nextInfo() {
-  let idx = infoList.indexOf(infoMode);
+function nextInfo(idx) {
   if (idx > -1) {
-    if (idx === infoList.length - 1) infoMode = infoList[0];
-    else infoMode = infoList[idx + 1];
+    if (idx === infoList.length - 1) idx = 0;
+    else idx += 1;
   }
-  // power HRM on/off accordingly
-  Bangle.setHRMPower(infoMode == "ID_HRM" ? 1 : 0);
-  resetHrm();
+  return idx;
 }
 
-function prevInfo() {
-  let idx = infoList.indexOf(infoMode);
+function prevInfo(idx) {
   if (idx > -1) {
-    if (idx === 0) infoMode = infoList[infoList.length - 1];
-    else infoMode = infoList[idx - 1];
+    if (idx === 0) idx = infoList.length - 1;
+    else idx -= 1;
   }
-  // power HRM on/off accordingly
-  Bangle.setHRMPower(infoMode == "ID_HRM" ? 1 : 0);
-  resetHrm();
+  return idx;
 }
 
 function clearInfo() {
@@ -211,28 +262,94 @@ function drawHrm() {
   g.drawString(hrmCurrent, (w/2) + 10, infoLine);
 }
 
-function draw() {
-  if (!idle)
-    drawClock();
+function draw(drawRingOnly) {
+  if (!idle) {
+    if (drawRingOnly) {
+      drawGaugeImage(new Date());
+    }
+    else {
+      drawClock();
+    }
+  }
   else
     drawIdle();
   queueDraw();
 }
 
+function drawGaugeImage(date) {
+  var hh = date.getHours();
+  var mm = date.getMinutes();
+  var ring_fill;
+  var invertRing = false;
+  var ring_max = 100;
+  switch (settings.ring) {
+    case 'Hours':
+      ring_fill = ((hh % 12) * 60) + mm;
+      ring_max = 720;
+      break;
+    case 'Minutes':
+      ring_fill = mm;
+      ring_max = 60;
+      break;
+    case 'Seconds':
+      ring_fill = date.getSeconds();
+      ring_max = 60;
+      break;
+    case 'Day':
+      ring_fill = (hh * 60) + mm;
+      ring_max = 1440;
+      break;
+    case 'Steps':
+      ring_fill = getSteps();
+      ring_max = settings.step_target;
+      break;
+    case 'Battery':
+      ring_fill = E.getBattery();
+      break;
+    case 'Sun':
+      var dayMin = getMinutesFromDate(date);
+      if (dayMin >= sunEnd && dayMin <= night) ring_fill = ring_max;
+      else {
+        ring_fill = ring_max * (date - sunStart) / sunFull;
+        if (ring_fill > ring_max) {  // If we're now past a sunrise of sunset
+          updateSunRiseSunSet(date, location.lat, location.lon, true);
+          ring_fill = ring_max * (date - sunStart) / sunFull;
+        }
+      }
+      invertRing = !isDaytime;
+      break;
+  }
+  var start = 0;
+  var end = Math.round(ring_fill);
+  if (invertRing) {
+    start = ring_max - end;
+    end = ring_max;
+  }
+  if (end !== prevRing.end || start !== prevRing.start || ring_max !== prevRing.max) {
+    drawRing(start, end, ring_max);
+    prevRing.start = start;
+    prevRing.end = end;
+    prevRing.max = ring_max;
+    log_debug("Redrew ring at " + hh + ":" + mm);
+  }
+  log_debug("Start: "+ start + "  end: " +end);
+}
+
 function drawClock() {
   var date = new Date();
-  //var timeStr = require("locale").time(date,1);
-  var da = date.toString().split(" ");
-  //var time = da[4].substr(0,5);
-  var hh = da[4].substr(0,2);
-  var mm = da[4].substr(3,2);
-  var steps = getSteps();
-  var p_steps = Math.round(100*(steps/10000));
+  var hh = date.getHours();
+  var mm = date.getMinutes();
+  if (settings.hr_12) {
+    hh = hh % 12;
+    if (hh == 0) hh = 12;
+  }
+  hh = hh.toString().padStart(2, '0');
+  mm = mm.toString().padStart(2, '0');
 
   g.reset();
   g.setColor(g.theme.bg);
-  g.fillRect(0, 0, w, h);
-  g.drawImage(getGaugeImage(p_steps), 0, 0);
+  g.fillEllipse(ringEdge+ringThick,ringEdge+ringThick,w-ringEdge-ringThick,h-ringEdge-ringThick); // Clears the text within the circle
+  drawGaugeImage(date);
   setLargeFont();
 
   g.setColor(settings.fg);
@@ -246,8 +363,10 @@ function drawClock() {
   drawInfo();
 
   // recalc sunrise / sunset every hour
-  if (drawCount % 60 == 0)
-    updateSunRiseSunSet(new Date(), location.lat, location.lon);
+  if (drawCount % 60 == 0) {
+    let recalcSunLeft = (settings.ring == 'Sun');
+    updateSunRiseSunSet(date, location.lat, location.lon, recalcSunLeft);
+  }
   drawCount++;
 }
 
@@ -287,122 +406,62 @@ Bangle.on('HRM', function(hrm) {
 
 /////////////////   GAUGE images /////////////////////////////////////
 
-
-// putting into 1 function like this, rather than individual variables
-// reduces ram usage from 70%-13%
-function getGaugeImage(p) {
-  // p0
-  if (p < 2) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVAAVUFUgpDAAdAFMEBFQ4ABqBVnLMQqLLLzWEABLgbVgohEGopYaiofDBihWVHJpYYDgYPbKx1ACJhYZIwT4OcAZWYHyRYUIgQXQH4RqOThCXUYRpCHNyQVVQQTwVQiSZWIQSEQNgSYSIYiEQQSyEUCQLDSOAyCnQiSCYQiSCYQiSCZDaDARObKuBSZwcaVzR0QFYKuZWAYNZWCJJKMoKuaWAahKBhiwTJRSudURorBFTgfMVzqjDO5DaeZ5jaeJhhiKbi4rIbT4hLqoriPI7afUpS5BbTwiKFdZgIADSmHFYIqgbgIrGcgIriEYwzHADZ7HRY4rdaYrjHADcBFYoGBFcgkEGQwAeFYqKHFbzUEcQ4AdiorwiorlEogxFAD59FWoorhoArDqArjgIr/FbYwFAEJSDFf4rXgornqgrDFUkAior/Ff4rGAYYAjKYYr/Ff4r/FbdVFdFAFYNQFcsBFf4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/FbdUFcsFFYUVFdADBFf4r/Ff4rbAYYAjKYYr/Ff4rFoArkqorCgIrnqAr/FbIEFAEBSFFf4rYqgrjgorEiormAocVAogAfEooxFFcB9EFdq1DAD9VFYkBFctQFYoGEADokHFcp8FRQoAdag7iFFb4HFioHGADYjHGY4rcPYyLHADbTHcYNQFT4iIFdZgIADKmJqrcgiorIBIIrhMKIAXUpIrBbjzaBFZAKKbS5MJFcKkJbj4fLBYLcdqorKbjzPMbjxKNMhauTURawdJJorBWDShBFZiRBWDQcOHRyuPOhorBWDIbPWDRzQSYKEYIwLLOHgSEXDIJyPQjD2SQjCCQQjSCRCYY/QN4xDRQiyCSQgjdSCqqECLCRWBYyiECISBWCYqgXCLCBWCQSYYEIhxqCeChYFThoQCKypYEIxgPPLB4cKFQZWXDoosIBhhYWcArWDKzYhHABA1EADArNoArcFhgqeWQysgLJxVfcBLWdAH4A5A"))
-  };
-
-  // p2
-  if (p >= 2 && p < 4) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette: pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/ADNUFE8FqtVq2q1AqkFIIrDAAOAFMEBFQYrE1WgKsYrGLL4qFFY2pqDWeFZdUVkAhCAQMKFYdVLDUVFQYMHlWq0oMJKyoOJlQrCLDBWDB5clB5xWOoARMCARYWKwT4OgpYXKwY+SLChECC6A/CNRycIS6jCNIQ5uSCqqCCeCqESTKxCCQiBsCTCRDEQiCCWQigSBYaRwGQU6ESQTCESQTCESQTIbQYCJzZVwKTODjSuaOiArBVzKwDBrKwRJJRlBVzSwDUJQMMWCZKKVzqiNFYIqcD5iudUYZ3IbTzPMbTxMMMRTcXFZDafEJdVFcR5HbT6lKXILaeERQrrMBAAaUw4rBFUDcBFYzkBFcQjGGY4AbPY6LHFbrTFcY4AbgIrFAwIrkEggyGADwrFRQ4reagjiHADsVFeEVFcolEGIoAfPoq1FFcNAFYdQFccBFf4rbGAoAhKQYr/Fa8FFc9UFYYqkgEVFf4r/FYwDDAEZTDFf4r/Ff4rbqorooArBqArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlgorCioroAYIr/Ff4r/FbYDDAEZTDFf4r/FYtAFclVFYUBFc9QFf4rZAgoAgKQor/FbFUFccFFYkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHI"))
-  };
-
-  // p4
-  if (p >= 4 && p < 7) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVqtW1WoFUgpBFYYABwApggIqDFYmq0BVjFY2loAqjFY1VqDWeFZdUVkAhEhQrDLDcVFQYMHlQrCBhBWVHJpYYDgYPbKx1ACJhYZIwT4OgpYXKwY+SLChECC6A/CNRycIS6jCNIQ5uSCqqCCeCqESTKxCCQiBsCTCRDEQiCCWQigSBYaRwGQU6ESQTCESQTCESQTIbQYCJzZVwKTODjSuaOiArBVzKwDBrKwRJJRlBVzSwDUJQMMWCZKKVzqiNFYIqcD5iudUYZ3IbTzPMbTxMMMRTcXFZDafEJdVFcR5HbT6lKXILaeERQrrMBAAaUw4rBFUDcBFYzkBFcQjGGY4AbPY6LHFbrTFcY4AbgIrFAwIrkEggyGADwrFRQ4reagjiHADsVFeEVFcolEGIoAfPoq1FFcNAFYdQFccBFf4rbGAoAhKQYr/Fa8FFc9UFYYqkgEVFf4r/FYwDDAEZTDFf4r/Ff4rbqorooArBqArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlgorCioroAYIr/Ff4r/FbYDDAEZTDFf4r/FYtAFclVFYUBFc9QFf4rZAgoAgKQor/FbFUFccFFYkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHI"))
-  };
-
-  // p7
-  if (p >= 7 && p < 10) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVqtW1WoFUgpBFYYABwApggIqDFYmq0BVjFYxZfFQorGLLrWCFZbgbVgtUBQcKLD8VFQYMHlQsDKzoOJFgZYYKwYPLFgWlKzVACJgrCqBWYawgAJcAOlNBhWMCZ8qFYJYUgoqBC6ECFYJqOAApWSS4jCNQQ5uSCqqCCeCqESFQKZUIQSEQNgSYSIYiEQQSyEUCQLDSOAyCnQiSCYQiSCYQiSCZDaDARObKuBSZwcaVzR0QFYKuZWAYNZWCJJKMoKuaWAahKBhiwTJRSudURorBFTgfMVzqjDO5DaeZ5jaeJhhiKbi4rIbT4hLqoriPI7afUpS5BbTwiKFdZgIADSmHFYIqgbgIrGcgIriEYwzHADZ7HRY4rdaYrjHADcBFYoGBFcgkEGQwAeFYqKHFbzUEcQ4AdiorwiorlEogxFAD59FWoorhoArDqArjgIr/FbYwFAEJSDFf4rXgornqgrDFUkAior/Ff4rGAYYAjKYYr/Ff4r/FbdVFdFAFYNQFcsBFf4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/FbdUFcsFFYUVFdADBFf4r/Ff4rbAYYAjKYYr/Ff4rFoArkqorCgIrnqAr/FbIEFAEBSFFf4rYqgrjgorEiormAocVAogAfEooxFFcB9EFdq1DAD9VFYkBFctQFYoGEADokHFcp8FRQoAdag7iFFb4HFioHGADYjHGY4rcPYyLHADbTHcYNQFT4iIFdZgIADKmJqrcgiorIBIIrhMKIAXUpIrBbjzaBFZAKKbS5MJFcKkJbj4fLBYLcdqorKbjzPMbjxKNMhauTURawdJJorBWDShBFZiRBWDQcOHRyuPOhorBWDIbPWDRzQSYKEYIwLLOHgSEXDIJyPQjD2SQjCCQQjSCRCYY/QN4xDRQiyCSQgjdSCqqECLCRWBYyiECISBWCYqgXCLCBWCQSYYEIhxqCeChYFThoQCKypYEIxgPPLB4cKFQZWXDoosIBhhYWcArWDKzYhHABA1EADArNoArcFhgqeWQysgLJxVfcBLWdAH4A5A=="))
-  };
-
-  // p10
-  if (p >= 10 && p < 20) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVqtW1WoFUgpBFYYABwApggIqDFYmq0BVjFYxZfFQorGLLrWCFZbgbVgtUBQcKLD8VFQYMHlQsDKzoOJFgZYYKwYPLFgZWaoARMLDJWCawgAJcAZWYCZ6FCLCkFFQNQCZ8CFYOoFaZWSLAmAQShWQLAiESQQRtTLAOkQSdUFacK1WloCCSCaAAEFYKaQQSyEC0pvQirZTbomlIh6CYZAZFOQTBxDQhyCYOQhoPQS4bQHaBzaVwKTODjSuaOiArBVzKwDBrKwRJJRlBVzSwDUJQMMWCZKKVzqiNFYIqcD5iudUYZ3IbTzPMbTxMMMRTcXFZDafEJdVFcR5HbT6lKXILaeERQrrMBAAaUw4rBFUDcBFYzkBFcQjGGY4AbPY6LHFbrTFcY4AbgIrFAwIrkEggyGADwrFRQ4reagjiHADsVFeEVFcolEGIoAfPoq1FFcNAFYdQFccBFf4rbGAoAhKQYr/Fa8FFc9UFYYqkgEVFf4r/FYwDDAEZTDFf4r/Ff4rbqorooArBqArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlgorCioroAYIr/Ff4r/FbYDDAEZTDFf4r/FYtAFclVFYUBFc9QFf4rZAgoAgKQor/FbFUFccFFYkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHI"))
-  };
-
-  // p20
-  if (p >= 20 && p < 30) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVqtW1WoFUgpBFYYABwApggIqDFYmq0BVjFYxZfFQorGLLrWCFZbgbVgtUBQcKLD8VFQYMHlQsDKzoOJFgZYYKwYPLFgZWaoARMLDJWCawgAJcAZWYCZ6FCLCkFFQNQCZ8CFYOoFaZWSLAmAQShWQLAiESQQRtTLAKESFQNUFacKQiSCCoArTgCESQSyEUirZTboyCnQiSCYQiSCYQiSCZQgeAVxwqYQgSwMVwNUFbMKWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbhdVFcTcHbT7cDFY0BbT7cD0ArxgtVoArfgGq1ArHFUDcBFY0VFceqFY1UFcMKFY1VFcmAFYtQFcMCFYsBFcugFYtAFcMAFYsFFcuoFYoqigEqFeEVFcuqFYlUFccKFYlVFc2AFYdQFccCFf4AWgNVoAEGAERSDFf4rXgornqgrDFUkAior/Ff4rGAYYAjKYYr/Ff4r/FbdVFdFAFYNQFcsBFf4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/FbdUFcsFFYUVFdADBFf4r/Ff4rbAYYAjKYYr/Ff4rFoArkqorCgIrnqAr/FbIEFAEBSFFf4rYqgrjgorEiormAocVAogAfEooxFFcB9EFdq1DAD9VFYkBFctQFYoGEADokHFcp8FRQoAdag7iFFb4HFioHGADYjHGY4rcPYyLHADbTHcYNQFT4iIFdZgIADKmJqrcgiorIBIIrhMKIAXUpIrBbjzaBFZAKKbS5MJFcKkJbj4fLBYLcdqorKbjzPMbjxKNMhauTURawdJJorBWDShBFZiRBWDQcOHRyuPOhorBWDIbPWDRzQSYKEYIwLLOHgSEXDIJyPQjD2SQjCCQQjSCRCYY/QN4xDRQiyCSQgjdSCqqECLCRWBYyiECISBWCYqgXCLCBWCQSYYEIhxqCeChYFThoQCKypYEIxgPPLB4cKFQZWXDoosIBhhYWcArWDKzYhHABA1EADArNoArcFhgqeWQysgLJxVfcBLWdAH4A5A="))
-  };
-
-  // p30
-  if (p >= 30 && p < 40) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVqtW1WoFUgpBFYYABwApggIqDFYmq0BVjFYxZfFQorGLLrWCFZbgbVgtUBQcKLD8VFQYMHlQsDKzoOJFgZYYKwYPLFgZWaoARMLDJWCawgAJcAZWYCZ6FCLCkFFQNQCZ8CFYOoFaZWSLAmAQShWQLAiESQQRtTLAKESFQNUFacKQiSCCoArTgCESQSyEUirZTboyCnQiSCYQiSCYQiSCZQgeAVxwqYQgSwMVwNUFbMKWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbhdVFcTcHbT7cDFY0BbT7cD0ArxgtVoArfgGq1ArHFUDcBFY0VFceqFY1UFcMKFY1VFcmAFYtQFcMCFYsBFcugFYtAFcMAFYsFFcuoFYoqigEqFeEVFcuqFYlUFccKFYlVFc2AFYdQFccCFf4rbgNVoArjgGq0Ar/FbMFFc+oFYYqkgEqFf4r/FY0VqgrlhWqFf4r/Ff4rdqorowArBqArlgQr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlhQrCioroAYIr/Ff4r/FbcFqorllWoFf4r/FY9AFcmqFYUBFc+gFf4rZgFVqAqjgWqwAr/FbdUFccFawkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHI"))
-  };
-
-  // p40
-  if (p >= 40 && p < 50) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal1,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVqtW1WoFUgpBFYYABwApggIqDFYmq0BVjFYxZfFQorGLLrWCFZbgbVgtUBQcKLD8VFQYMHlQsDKzoOJFgZYYKwYPLFgZWaoARMLDJWCawgAJcAZWYCZ6FCLCkFFQNQCZ8CFYOoFaZWSLAmAQShWQLAiESQQRtTLAKESFQNUFacKQiSCCoArTgCESQSyEUirZTboyCnQiSCYQiSCYQiSCZQgeAVxwqYQgSwMVwNUFbMKWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbhdVFcTcHbT7cDFY0BbT7cD0ArxgtVoArfgGq1ArHFUDcBFY0VFceqFY1UFcMKFY1VFcmAFYtQFcMCFYsBFcugFYtAFcMAFYsFFcuoFYoqigEqFeEVFcuqFYlUFccKFYlVFc2AFYdQFccCFf4rbgNVoArjgGq0Ar/FbMFFc+oFYYqkgEqFf4r/FY0VqgrlhWqFf4r/Ff4rdqorowArBqArlgQr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlhQrCioroAYIr/Ff4r/FbcFqorllWoFf4r/FY9AFcmqFYUBFc+gFf4rZgFVqAqjgWqwAr/FbdUFccKFYkVFcwFDitVFccqFYkFFcuoFeNAFcWqFYkBFcugFYtQFUMCFYsAFcuAFYtUFcMKFY0VFcgHFitVFcMqFY0FFceoFY9AFcGqFY0BqtQFT8C1WgFeMAqtUFb8K1WAFY7cglQrIioriBI8FqtAFb2q1ArJbjzaBFZEBbj7aB0ALIFcLaHbkLaJFYbcd1QrKbjzaKbkDaLbgSwcVwLaJWD6uLFYawaVwIrMbgKwaVwLaKbgawaVwLaLbgawZQQLaLWDiuOWAaEYQQKuMWAiEXKwKuNQjUBQR6EaiqCPQjVVQSATCqtUFSZvB1WACiSEUY4KCQQgjdSCqqECLCRWBYyiECISBWCYqgXCLCBWCQSYYEIhxqCeChYFThoQCKypYEIxgPPLB4cKFQZWXDoosIBhhYWcArWDKzYhHABA1EADArNoArcFhgqeWQysgLJxVfcBLWdAH4A5A"))
-  };
-
-  // p50
-  if (p >= 50 && p < 60) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal2,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4AChWq1WpqtUFUgpBFYYABoApggQqDFYlVqBVjFYxZfFQorGLLrWCFZbgbVguoBQcFLD8qFQYMHiosDKzoOJFgZYYKwYPLFgZWawARMLDJWCawgAJcAZWYCZ6FCLCkKFQOgCZ8BFYNUFaZWSLAlAQShWQLAiESQQRtTLAKESFQOoFacFQiSCCwArTgCESQSyEUlTZTboyCnQiSCYQiSCYQiSCZQgdAVxwqYQgSwMVwOoFbMFWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbheqFcTcHbT7cDFY0CbT7cDqArxhWqwArfgFVqgrHFUDcBFY0qFcdVFY2oFcMFFY2qFclAFYugFcMBFYsCFctQFYuAFcMAFYsKFctUFYoqigEVFeEqFctVFYmoFccFFYmqFc1AFYegFccBFf4rbgWqwArjgFVqAr/FbMKFc9UFYYqkgEVFf4r/FY0q1ArlgtVFf4r/Ff4rd1QrooArB0ArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rb1ArlgorClQroAYIr/Ff4r/FbcK1QrlitUFf4r/FY+AFclVFYUCFc9QFf4rZgGq0AqjgNVoAr/FbeoFccFFYkqFcwFDlWqFccVFYkKFctUFeOAFcVVFYkCFctQFYugFUMBFYsAFctAFYuoFcMFFY0qFcgHFlWqFcMVFY0KFcdUFY+AFcFVFY0C1WgFT8BqtQFeMA1WoFb8FqtAFY7cgiorIlQriBI8K1WAFb1VqgrJbjzaBFZECbj7aBqALIFcLaHbkLaJFYbcdqorKbjzaKbkDaLbgSwcVwLaJWD6uLFYawaVwIrMbgKwaVwLaKbgawaVwLaLbgawZQQLaLWDiuOWAaEYQQKuMWAiEXKwKuNQjSCQQjSCQQjSCRAAIrB1AqTgorBoAUQQiyCSQgjdSbISCRQgZYSKwKCSQghYQKwSCSQghYQKwSCTAAMqFYOoCJsFFQNVFShYEwARMFQRWVLAiFMQIRWWLAosKFQZWXLAosIFQZWYLAzgFawZWbAAMKFgmq1IoEAANUFTQABFZtAFbgsFFYwqeWQorFVjZZJFYhVfcAwrCazoA/AHI"))
-  };
-
-  // p60
-  if (p >= 60 && p < 70) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal2,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4AChWq1WpqtUFUgpBFYYABoApggQqDFYlVqBVjFYxZfFQorGLLrWCFZbgbVguoBQcFLD8qFQYMHiosDKzoOJFgZYYKwYPLFgZWawARMLDJWCawgAJcAZWYCZ6FCLCkKFQOgCZ8BFYNUFaZWSLAlAQShWQLAiESQQRtTLAKESFQOoFacFQiSCCwArTgCESQSyEUlTZTboyCnQiSCYQiSCYQiSCZQgdAVxwqYQgSwMVwOoFbMFWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbheqFcTcHbT7cDFY0CbT7cDqArxhWqwArfgFVqgrHFUDcBFY0qFcdVFY2oFcMFFY2qFclAFYugFcMBFYsCFctQFYuAFcMAFYsKFctUFYoqigEVFeEqFctVFYmoFccFFYmqFc1AFYegFccBFf4rbgWqwArjgFVqAr/FbMKFc9UFYYqkgEVFf4r/FY0q1ArlgtVFf4r/Ff4rd1QrooArB0ArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rb1ArlgorClQroAYIr/Ff4r/FbcK1QrlitUFf4r/FY+AFclVFYUCFc9QFf4rZgGq0AqjgNVoAr/FbeoFccFFYkqFcwFDlWqFccVFYkKFctUFeOAFcVVFYkCFctQFYugFUMBFYsAFctAFYuoFcMFFY0qFcgHFlWqFcMVFY0KFcdUFY+AFcFVFY0C1WgFT8BqtQFeMA1WoFb8FqtAFY7cgiorIlQriBI8K1WAFb1VqgrJbjzaBFZECbj7aBqALIFcLaHbkLaJFYbcdqorKbjzaKbkDaLbgSwcVwLaJWD6uLFYawaVwIrMbgKwaVwLaKbgawaVwLaLbgawZQQLaLWDiuOWAaEYQQKuMWAelNBqCLVxqEC0oRPQS6EC0oSQQSyECFYKEVQSIABFYI/QAAcFFYJDRCgSCmYYjdSCqqYCLCRWBYyiECISBWCYqgXCLCBWCQSYYEIhxqCeChYFThoQCKypYEIxgPPLB4cKFQZWXDoosIBhhYWcArWDKzYhHABA1EADArNoArcFhgqeWQysgLJxVfcBLWdAH4A5A"))
-  };
-
-  // p70
-  if (p >= 70 && p < 80) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal2,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4AChWq1WpqtUFUgpBFYYABoApggQqDFYlVqBVjFYxZfFQorGLLrWCFZbgbVguoBQcFLD8qFQYMHiosDKzoOJFgZYYKwYPLFgZWawARMLDJWCawgAJcAZWYCZ6FCLCkKFQOgCZ8BFYNUFaZWSLAlAQShWQLAiESQQRtTLAKESFQOoFacFQiSCCwArTgCESQSyEUlTZTboyCnQiSCYQiSCYQiSCZQgdAVxwqYQgSwMVwOoFbMFWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbheqFcTcHbT7cDFY0CbT7cDqArxhWqwArfgFVqgrHFUDcBFY0qFcdVFY2oFcMFFY2qFclAFYugFcMBFYsCFctQFYuAFcMAFYsKFctUFYoqigEVFeEqFctVFYmoFccFFYmqFc1AFYegFccBFf4rbgWqwArjgFVqAr/FbMKFc9UFYYqkgEVFf4r/FY0q1ArlgtVFf4r/Ff4rd1QrooArB0ArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rb1ArlgorClQroAYIr/Ff4r/FbcK1QrlitUFf4r/FY+AFclVFYUCFc9QFf4rZAgoAggNVoAr/FbdUFccFFYkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHIA="))
-  };
-
-  // p80
-  if (p >= 80 && p < 90) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal2,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4AChWq1WpqtUFUgpBFYYABoApggQqDFYlVqBVjFYxZfFQorGLLrWCFZbgbVguoBQcFLD8qFQYMHiosDKzoOJFgZYYKwYPLFgZWawARMLDJWCawgAJcAZWYCZ6FCLCkKFQOgCZ8BFYNUFaZWSLAlAQShWQLAiESQQRtTLAKESFQOoFacFQiSCCwArTgCESQSyEUlTZTboyCnQiSCYQiSCYQiSCZQgdAVxwqYQgSwMVwOoFbMFWBquaWCArBVzKwDbRoqaWATcKbQKuaWAbcKbQKuaWAbcKVzqwNFYIqcWATaKVziwDbhDaebhjaebhgrBbTrcCFZDafbheqFcTcHbT7cDFY0CbT7cDqArxhWqwArfgFVqgrHFUDcBFY0qFcdVFY2oFcMFFY2qFclAFYugFcMBFYsCFctQFYuAFcMAFYsKFctUFYoqigEVFeEqFctVFYmoFccFFYmqFc1AcIdQFccBFf4rbGAoAhKQYr/Fa8FFc9UFYYqkgEVFf4r/FYwDDAEZTDFf4r/Ff4rbqorooArBqArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlgorCioroAYIr/Ff4r/FbYDDAEZTDFf4r/FYtAFclVFYUBFc9QFf4rZAgoAgKQor/FbFUFccFFYkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHIA="))
-  };
-
-  // p90
-  if (p >= 90 && p < 100) return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal2,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4AChWq1WpqtUFUgpBFYYABoApggQqDFYlVqBVjFYxZfFQorGLLrWCFZbgbVguoBQcFLD8qFQYMHiosDKzoOJFgZYYKwYPLFgZWawARMLDJWCawgAJcAZWYCZ6FCLCkKFQOgCZ8BFYNUFaZWSLAlAQShWQLAiESQQRtTLAKESquq1ArTgqESNgOqwArTIYKERH4KCUQigSBbKTdGCKKCVQiTCCFSyERCALBQQjAPBoArXDZ7ARObKuBSZwcaVzR0QFYKuZWAYNZWCJJKMoKuaWAahKBhiwTJRSudURorBFTgfMVzqjDO5DaeZ5jaeJhhiKbi4rIbT4hLqoriPI7afUpS5BbTwiKFdZgIADSmHFYIqgbgIrGcgIriEYwzHADZ7HRY4rdaYrjHADcBFYoGBFcgkEGQwAeFYqKHFbzUEcQ4AdiorwiorlEogxFAD59FWoorhoArDqArjgIr/FbYwFAEJSDFf4rXgornqgrDFUkAior/Ff4rGAYYAjKYYr/Ff4r/FbdVFdFAFYNQFcsBFf4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/FbdUFcsFFYUVFdADBFf4r/Ff4rbAYYAjKYYr/Ff4rFoArkqorCgIrnqAr/FbIEFAEBSFFf4rYqgrjgorEiormAocVAogAfEooxFFcB9EFdq1DAD9VFYkBFctQFYoGEADokHFcp8FRQoAdag7iFFb4HFioHGADYjHGY4rcPYyLHADbTHcYNQFT4iIFdZgIADKmJqrcgiorIBIIrhMKIAXUpIrBbjzaBFZAKKbS5MJFcKkJbj4fLBYLcdqorKbjzPMbjxKNMhauTURawdJJorBWDShBFZiRBWDQcOHRyuPOhorBWDIbPWDRzQSYKEYIwLLOHgSEXDIJyPQjD2SQjCCQQjSCRCYY/QN4xDRQiyCSQgjdSCqqECLCRWBYyiECISBWCYqgXCLCBWCQSYYEIhxqCeChYFThoQCKypYEIxgPPLB4cKFQZWXDoosIBhhYWcArWDKzYhHABA1EADArNoArcFhgqeWQysgLJxVfcBLWdAH4A5A"))
-  };
-
-  // p100
-  return {
-    width : 176, height : 176, bpp : 2,
-    transparent : -1,
-    palette : pal2,
-    buffer : require("heatshrink").decompress(atob("AH4A/AH4ACgtVAAVUFUgpDAAdAFMEBFQ4ABqBVnLMQqLFjzWEABLgbVgohEGoqyaiofDBihWVHJpYYDgYPbKxz5NLDJGCfBzgDKzA+SLChECC6A/CNRycIS6jCNIQ5uSCqqCCeCqESTKxCCQiBsCTCRDEQiCCWQigSBYaRwGQU6ESQTCESQTCESQTIbQYCJzZVwKTODjSuaOiArBVzKwDBrKwRJJRlBVzSwDUJQMMWCZKKVzqiNFYIqcD5iudUYZ3IbTzPMbTxMMMRTcXFZDafEJdVFcR5HbT6lKXILaeERQrrMBAAaUw4rBFUDcBFYzkBFcQjGGY4AbPY6LHFbrTFcY4AbgIrFAwIrkEggyGADwrFRQ4reagjiHADsVFeEVFcolEGIoAfPoq1FFcNAFYdQFccBFf4rbGAoAhKQYr/Fa8FFc9UFYYqkgEVFf4r/FYwDDAEZTDFf4r/Ff4rbqorooArBqArlgIr/Ff4r/Ff4r/Ff4r/Ff4r/Ff4r/Ff4rbqgrlgorCioroAYIr/Ff4r/FbYDDAEZTDFf4r/FYtAFclVFYUBFc9QFf4rZAgoAgKQor/FbFUFccFFYkVFcwFDioFEAD4lFGIorgPogrtWoYAfqorEgIrlqArFAwgAdEg4rlPgqKFADrUHcQorfA4sVA4wAbEY4zHFbh7GRY4AbaY7jBqAqfERArrMBAAZUxNVbkEVFZAJBFcJhRAC6lJFYLcebQIrIBRTaXJhIrhUhLcfD5YLBbjtVFZTceZ5jceJRpkLVyaiLWDpJNFYKwaUIIrMSIKwaDhw6OVx50NFYKwZDZ6waOaCTBQjBGBZZw8CQi4ZBOR6EYeySEYQSCEaQSITDH6BvGIaKEWQSSEEbqQVVQgRYSKwLGUQgRCQKwTFUC4RYQKwSCTDAhEONQTwULAqcNCARWVLAhGMB55YPDhQqDKy4dFFhAMMLCzgFawZWbEI4AIGogAYFZtAFbgsMFTyyGVkBZOKr7gJazoA/AHIA="))
-  };
+function addPoint(loc, max) {
+  var angle = ((2*Math.PI)/max) * loc;
+  var x = hyp * Math.sin(angle);
+  var y = hyp * Math.cos(angle + Math.PI);
+  x += rad;
+  y += rad;
+  return [Math.round(x),Math.round(y)];
 }
+
+function polyArray(start, end, max) {
+  const eighth = max / 8;
+  if (start == end) return []; // No array to draw if the points are the same.
+  let startOrigin = start;
+  let endOrigin = end;
+  start %= max;
+  end %= max;
+  if(start == 0 && startOrigin != 0) start = max;
+  if(end == 0 && endOrigin != 0) end = max;
+  if (start > end) end += max;
+  var array = [g.getHeight()/2, g.getHeight()/2];
+  var pt = addPoint(start, max);
+  array.push(pt[0], pt[1]);
+
+  for (let i = start + eighth; i < end; i += eighth) {
+    pt = addPoint(i, max);
+    array.push(pt[0], pt[1]);
+  }
+  pt = addPoint(end, max);
+  array.push(pt[0], pt[1]);
+  log_debug("Poly Arr: " + array);
+  return array;
+}
+
+function drawRing(start, end, max) {
+  // Create persistent `buf` inside the function scope
+  if (!drawRing._buf) {
+    drawRing._buf = Graphics.createArrayBuffer(w, h, 2, { msb: true });
+  }
+  const buf = drawRing._buf;
+  let img = { width: w, height: h, transparent: 0,
+              bpp: 2, palette: pal1, buffer: buf.buffer };
+  buf.clear();
+  buf.setColor(1).fillEllipse(ringEdge,ringEdge,w-ringEdge,h-ringEdge);
+  buf.setColor(0).fillEllipse(ringEdge+ringThick,ringEdge+ringThick,w-ringEdge-ringThick,h-ringEdge-ringThick);
+  img.palette = pal2;
+  g.drawImage(img, 0, 0);  // Draws a filled-in circle
+  if((end - start) >= max) return;  // No need to add the unfilled circle
+  buf.clear();
+  buf.setColor(1).fillEllipse(ringEdge,ringEdge,w-ringEdge,h-ringEdge);
+  buf.setColor(0).fillEllipse(ringEdge+ringThick,ringEdge+ringThick,w-ringEdge-ringThick,h-ringEdge-ringThick);
+  buf.setColor(0).fillPoly(polyArray(start, end, max)); // Masks the filled-in part of the segment over the unfilled part
+  img.palette = pal1;
+  g.drawImage(img, 0, 0);  // Draws the unfilled-in segment
+  return;
+}
+
 
 /////////////////   IDLE TIMER /////////////////////////////////////
 
@@ -460,7 +519,7 @@ function dismissPrompt() {
   warned = false;
   lastStep = getTime();
   Bangle.buzz(100);
-  draw();
+  draw(false);
 }
 
 var dismissBtn = new BUTTON("big",0, 3*h/4 ,w, h/4, "#0ff", dismissPrompt, "Dismiss");
@@ -535,25 +594,58 @@ function buzzer(n) {
   }, 500);
 }
 
+function getDelayMs(prevDelayMs, ring_setting, now) {
+  // Much of the logic here is for slowing or speeding the delay on the seconds setting.
+  // returns [ms before next update, if only the ring should be updated]
+  const sec_batt = [20, 50];
+  const sec_delay = [10000, 2000, 1000];
+  const deadband = 5;
+  if (ring_setting == 'Seconds') {
+    const nearNextMinute = (now % 60000) >= (60000 - prevDelayMs);
+    if (nearNextMinute) {
+      let batt = E.getBattery();
+      for (let i = 0; i < sec_batt.length; i++) {
+        if (batt <= sec_batt[i])
+          return [sec_delay[i], false];
+      }
+      // Check for coming out of the above states w/ deadband
+      for (let i = 0; i < sec_batt.length; i++) {
+        if (prevDelayMs == sec_delay[i] && batt >= (sec_batt[i] + deadband))
+          return [sec_delay[i + 1], false];
+      }
+      return [sec_delay[sec_delay.length - 1], false];
+    }
+    else {
+      return [prevDelayMs, true];
+    }
+  }
+  else
+    return [60000, false];
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // timeout used to update every minute
 var drawTimeout;
 
-// schedule a draw for the next minute
+// schedule a draw for the next minute or every sec_update ms
 function queueDraw() {
+  let now = Date.now();
+  var nextUpdateRet = getDelayMs(nextUpdateMs, settings.ring, now);
+  nextUpdateMs = nextUpdateRet[0];
+  let delay = nextUpdateMs - (now % nextUpdateMs);
   if (drawTimeout) clearTimeout(drawTimeout);
   drawTimeout = setTimeout(function() {
     drawTimeout = undefined;
     checkIdle();
-    draw();
-  }, 60000 - (Date.now() % 60000));
+    draw(nextUpdateRet[1]);
+  }, delay);
 }
 
 // Stop updates when LCD is off, restart when on
 Bangle.on('lcdPower',on=>{
   if (on) {
-    draw(); // draw immediately, queue redraw
+    draw(false); // draw immediately, queue redraw
   } else { // stop draw timer
     if (drawTimeout) clearTimeout(drawTimeout);
     drawTimeout = undefined;
@@ -561,13 +653,22 @@ Bangle.on('lcdPower',on=>{
 });
 
 Bangle.setUI("clockupdown", btn=> {
-  if (btn<0) prevInfo();
-  if (btn>0) nextInfo();
-  draw();
+  if (btn<0) settings.idxInfo = prevInfo(settings.idxInfo);
+  if (btn>0) settings.idxInfo = nextInfo(settings.idxInfo);
+  // power HRM on/off accordingly
+  infoMode = infoList[settings.idxInfo];
+  Bangle.setHRMPower(infoMode == "ID_HRM" ? 1 : 0);
+  resetHrm();
+  log_debug("idxInfo=" + settings.idxInfo);
+  draw(false);
+  storage.write(SETTINGS_FILE, settings);  // Retains idxInfo when leaving the face
 });
 
 loadSettings();
 loadLocation();
+var infoMode = infoList[settings.idxInfo];
+updateSunRiseSunSet(new Date(), location.lat, location.lon, true);
+nextUpdateMs = getDelayMs(1000, settings.ring, Date.now())[0];
 
 g.clear();
 Bangle.loadWidgets();
@@ -575,4 +676,4 @@ Bangle.loadWidgets();
  * we are not drawing the widgets as we are taking over the whole screen
  */
 widget_utils.hide();
-draw();
+draw(false);
